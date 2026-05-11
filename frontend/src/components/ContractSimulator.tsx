@@ -54,7 +54,7 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const handleSubmit = async () => {
-    if (!walletAddress) return
+    if (!walletAddress || !generatedContract) return
     setIsSubmitting(true)
     setSubmitError(null)
     try {

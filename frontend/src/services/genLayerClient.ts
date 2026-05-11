@@ -1,6 +1,7 @@
 import { createClient, createAccount, generatePrivateKey } from 'genlayer-js'
 import { studionet } from 'genlayer-js/chains'
 import { createWalletClient, custom } from 'viem'
+import type { CalldataEncodable } from 'genlayer-js/types'
 import type { WalletAccount } from '@/types'
 
 // Studionet chain ID in hex format (61999 decimal = 0xf22f hex)
@@ -119,7 +120,7 @@ export const createInjectedClient = async (userAddress?: string) => {
       return await viemWallet.signTransaction(txWithoutAccount as any)
     },
     signMessage: async ({ message }: any) => {
-      return await viemWallet.signMessage({ message })
+      return await viemWallet.signMessage({ account: address, message })
     },
     signTypedData: async (data: any) => {
       const { account: _, ...dataWithoutAccount } = data
@@ -147,13 +148,13 @@ export const getContractSource = async (address: string): Promise<string | null>
 
 export const readContractState = async (contractAddress: string) => {
   const client = createStudionetClient()
-  return client.getContractState(contractAddress as `0x${string}`)
+  return client.getContractSchema(contractAddress as `0x${string}`)
 }
 
 export const callContractMethod = async (
   contractAddress: string,
   method: string,
-  args: unknown[]
+  args: CalldataEncodable[]
 ) => {
   const client = createStudionetClient()
   return client.readContract({
