@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__7080d201-1c7d-46e3-9d7e-ce6031dc2137__search_genlayer_docs",
+      "mcp__7080d201-1c7d-46e3-9d7e-ce6031dc2137__genlayer_quick_reference",
+      "mcp__7080d201-1c7d-46e3-9d7e-ce6031dc2137__list_genlayer_pages",
+      "mcp__7080d201-1c7d-46e3-9d7e-ce6031dc2137__get_genlayer_page",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /PID 29508 /F)",
+      "PowerShell(taskkill /PID 29508 /F)",
+      "Bash(npm run *)",
+      "Bash(findstr \":3000\\\\|:5173\")",
+      "PowerShell($process = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($process\\) { $pid = $process.OwningProcess; Write-Host \"PID: $pid\"; taskkill /PID $pid /F } else { Write-Host \"No process using port 3000\" })",
+      "Bash(findstr \":3000\")",
+      "Bash(findstr \":5176\\\\|:3000\")",
+      "Bash(curl -s http://localhost:5176)",
+      "Bash(npx tsc *)",
+      "Bash(ls /mnt/c/Users/USER/Desktop/clause-forge/)",
+      "PowerShell($response = Invoke-RestMethod -Uri \"http://localhost:3001/api/v1/contracts/generate\" -Method Post -ContentType \"application/json\" -Body '{\"description\":\"A voting contract that lets users vote on proposals with yes/no options\"}' -TimeoutSec 30 2>&1; $response.data.generationId)",
+      "Bash(npm ls *)",
+      "PowerShell(Get-Process node | Where-Object {$_.ProcessName -eq \"node\"} | Stop-Process -Force 2>&1; Start-Sleep -Seconds 2; Write-Host \"Backend processes stopped\")",
+      "WebFetch(domain:docs.genlayer.com)",
+      "WebFetch(domain:sdk.genlayer.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://docs.genlayer.com/full-documentation.txt\" -o /tmp/gl_full.txt)",
+      "Read(//tmp/**)",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(awk '{print $2}')",
+      "Bash(xargs kill -9)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST http://localhost:54249/api/v1/contracts/generate -H \"Content-Type: application/json\" -d \"{\\\\\"description\\\\\":\\\\\"A simple counter contract\\\\\",\\\\\"model\\\\\":\\\\\"groq\\\\\"}\")",
+      "Bash(curl -s http://localhost:50051/api/v1/health)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s -X POST https://studio.genlayer.com/api -H \"Content-Type: application/json\" -d \"{\\\\\"jsonrpc\\\\\":\\\\\"2.0\\\\\",\\\\\"method\\\\\":\\\\\"gl_getContractCode\\\\\",\\\\\"params\\\\\":[\\\\\"0xE52c97Ba21C6601d81dA643F4BF94E8cACEcED46\\\\\"],\\\\\"id\\\\\":1}\")",
+      "Bash(curl -s -X POST https://studio.genlayer.com/api -H \"Content-Type: application/json\" -d \"{\\\\\"jsonrpc\\\\\":\\\\\"2.0\\\\\",\\\\\"method\\\\\":\\\\\"gen_getContractCode\\\\\",\\\\\"params\\\\\":[\\\\\"0xE52c97Ba21C6601d81dA643F4BF94E8cACEcED46\\\\\"],\\\\\"id\\\\\":1}\")"
+    ]
+  }
+}
