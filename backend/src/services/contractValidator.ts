@@ -79,12 +79,38 @@ const runSpecChecks = (
     })
   }
 
+  if (!code.includes('@gl.public.view')) {
+    errors.push({
+      type: 'SpecError',
+      severity: 'critical',
+      message: 'Contract must include at least one @gl.public.view method for schema/UI inspection',
+      suggestion: 'Add a simple getter such as get_count() or get_record(id: int).',
+    })
+  }
+
   if (!code.includes('def __init__')) {
     warnings.push({
       type: 'SpecWarning',
       severity: 'warning',
       message: 'Missing __init__ method',
     })
+  }
+
+  const storageScanPatterns = [
+    { pattern: /\.values\(\)/, label: '.values() over storage collections' },
+    { pattern: /\.items\(\)/, label: '.items() over storage collections' },
+    { pattern: /for\s+\w+\s+in\s+self\.\w+/, label: 'looping directly over storage collections' },
+  ]
+
+  for (const { pattern, label } of storageScanPatterns) {
+    if (pattern.test(code)) {
+      warnings.push({
+        type: 'SpecWarning',
+        severity: 'warning',
+        message: `Avoid ${label}; it can break GenLayer schema/deploy behavior`,
+        suggestion: 'Use direct TreeMap lookups or a secondary TreeMap index for duplicate checks.',
+      })
+    }
   }
 }
 

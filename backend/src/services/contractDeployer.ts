@@ -60,10 +60,16 @@ export const deployContract = async (params: {
       interval: 3000,
     })
 
-    const contractAddress: string =
+    const contractAddress: string | undefined =
+      receipt?.txDataDecoded?.contractAddress ??
       receipt?.data?.contract_address ??
-      receipt?.to_address ??
-      hash
+      receipt?.data?.contractAddress ??
+      receipt?.contractAddress ??
+      receipt?.to_address
+
+    if (!contractAddress) {
+      throw new Error('Deployment finalized, but no contract address was returned by GenLayer')
+    }
 
     return {
       transactionHash: hash,

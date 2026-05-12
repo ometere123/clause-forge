@@ -36,6 +36,18 @@ class MyContract(gl.Contract):
 \`\`\`
 Note: __init__ args are provided at deploy time by the deployer. Use them when the contract needs configuration (initial values, team names, etc.). If no config needed, use def __init__(self): pass
 
+SCHEMA-SAFE GENERATION RULES
+Generate contracts that can be deployed and introspected by GenLayerJS getContractSchema.
+- Every contract MUST expose at least one @gl.public.view method, even when the main behavior is write-only.
+- Prefer simple, schema-stable architecture first: state vars, TreeMap lookups, bounded write methods, explicit view getters.
+- Do NOT scan storage collections with .values(), .items(), list comprehensions, generator expressions, or loops over TreeMap contents. For uniqueness, keep a secondary index like seen_hashes: TreeMap[str, u64].
+- Use TreeMap membership only with the exact key type, or use m.get(key, default_value) when a default makes sense.
+- Do NOT use events, payable methods, transfers, cross-contract calls, web fetches, or AI unless the user description explicitly requires them.
+- If the user requests escrow, payments, deposits, tips, or token custody, payable + gl.message.value are allowed.
+- For split payments and token amounts, use integer math only. Never use float. Prefer // for division of u256 amounts.
+- Do not settle a paid agreement twice. After release/refund/split, mark status as resolved and reject future settlement calls.
+- Copy storage values into local variables before nondeterministic leader functions; do not read self.x inside leader_fn.
+
 ═══════════════════════════════════════════════════════════════
 STORAGE TYPES — ONLY THESE VALID IN STATE VARIABLES
 ═══════════════════════════════════════════════════════════════
@@ -499,6 +511,9 @@ MUST follow:
 - Depends header + from genlayer import *
 - State vars at CLASS level (auto-init, never assign DynArray/TreeMap in __init__)
 - __init__(self) only — no args
+- At least one @gl.public.view getter method for schema/UI inspection
+- Keep generated code schema-safe: no TreeMap .values()/.items(), no list comprehensions over storage, no scanning storage collections
+- For duplicate checks, use a secondary TreeMap index such as seen: TreeMap[str, u64]
 - All nondet ops in ONE run_nondet_unsafe(leader_fn, validator_fn)
 - LLM returns bounded JSON enums; validator checks shape not content
 - @allow_storage @dataclass for complex state (not dict/list)
@@ -531,7 +546,7 @@ const extractStructure = (code: string): ContractStructure => {
   const methods: ContractStructure['methods'] = []
   const stateVariables: Record<string, string> = {}
 
-  const methodRegex = /@gl\.public\.(view|write)\s+def\s+(\w+)\s*\(([^)]*)\)/g
+  const methodRegex = /@gl\.public\.(view|write)(?:\.payable)?\s+def\s+(\w+)\s*\(([^)]*)\)/g
   let match
   while ((match = methodRegex.exec(code)) !== null) {
     const isWrite = match[1] === 'write'
