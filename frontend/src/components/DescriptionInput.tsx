@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useContractGeneration } from '@/hooks/useContractGeneration'
 import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
+import ApiKeyPanel from '@/components/ApiKeyPanel'
 
 const TEMPLATES = [
   {
@@ -104,6 +105,8 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
             <li>• Say who can call each method (anyone, owner only, etc)</li>
           </ul>
         </div>
+
+        <ApiKeyPanel />
 
         {generationError && (
           <p className="text-sm text-destructive">{generationError}</p>

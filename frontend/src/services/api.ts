@@ -7,7 +7,10 @@ import type {
   ValidationResult,
   MarketplaceListing,
   ApiResponse,
+  DebugContractRequest,
+  DebugContractResult,
 } from '@/types'
+import { getGroqApiHeaders } from '@/utils/apiKey'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -22,7 +25,19 @@ export const generateContract = async (
 ): Promise<GeneratedContract> => {
   const { data } = await api.post<ApiResponse<GeneratedContract>>(
     '/v1/contracts/generate',
-    payload
+    payload,
+    { headers: getGroqApiHeaders() }
+  )
+  return data.data
+}
+
+export const debugContract = async (
+  payload: DebugContractRequest
+): Promise<DebugContractResult> => {
+  const { data } = await api.post<ApiResponse<DebugContractResult>>(
+    '/v1/contracts/debug',
+    payload,
+    { headers: getGroqApiHeaders(), timeout: 120000 }
   )
   return data.data
 }

@@ -21,8 +21,9 @@ export const useContractGeneration = () => {
       setGeneratedContract(data)
       setIsGenerating(false)
     },
-    onError: (error: Error) => {
-      setGenerationError(error.message)
+    onError: (error: any) => {
+      const detail = error?.response?.data?.error ?? error?.message ?? 'Generation failed'
+      setGenerationError(detail)
       setIsGenerating(false)
     },
   })

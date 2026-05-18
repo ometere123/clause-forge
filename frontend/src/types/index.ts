@@ -5,6 +5,7 @@ export interface ContractMethod {
   inputs: Array<{ name: string; type: string }>
   outputs: Array<{ name: string; type: string }>
   isWrite: boolean
+  isPayable?: boolean
   docstring?: string
 }
 
@@ -34,10 +35,20 @@ export interface GeneratedContract {
   contractName: string
   methods: ContractMethod[]
   stateVariables: Record<string, string>
+  frontendCallMap?: FrontendCallMapItem[]
   estimation: ContractEstimation
   originalDescription: string
   modelUsed: string
   generatedAt: string
+}
+
+export interface FrontendCallMapItem {
+  action: string
+  method: string
+  type: 'view' | 'write' | 'payable'
+  args: string[]
+  valueRequired: boolean
+  display: string
 }
 
 // ─── Deployment ─────────────────────────────────────────────────────────────
@@ -122,6 +133,24 @@ export interface ApiResponse<T> {
 export interface GenerateRequest {
   description: string
   model?: 'groq'
+}
+
+export interface DebugContractRequest {
+  code: string
+  errorMessage: string
+  intent?: string
+  previousFix?: string
+}
+
+export interface DebugContractResult {
+  diagnosis: string
+  fixedCode: string
+  explanation: string
+  changes: string[]
+  warnings: string[]
+  issueCategory?: string
+  frontendCallMap?: FrontendCallMapItem[]
+  modelUsed: string
 }
 
 export interface DeployRequest {

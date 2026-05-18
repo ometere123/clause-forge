@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
+import ContractLintPanel from '@/components/ContractLintPanel'
+import FrontendCallMapPanel from '@/components/FrontendCallMapPanel'
 
 interface CodePreviewProps {
   onDeploy: () => void
@@ -123,6 +125,8 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
                 ))}
               </div>
             </div>
+
+            <FrontendCallMapPanel items={generatedContract.frontendCallMap} />
           </div>
         )}
 
@@ -239,6 +243,8 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
             ))}
           </div>
         </div>
+
+        <ContractLintPanel code={generatedContract.generatedCode} />
 
         {/* CTA Button */}
         <button

@@ -7,6 +7,7 @@ import CopyButton from '@/components/CopyButton'
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/editor', label: 'Create' },
+  { to: '/debug', label: 'Debug' },
   { to: '/marketplace', label: 'Marketplace' },
 ]
 

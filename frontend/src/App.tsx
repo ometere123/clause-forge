@@ -4,6 +4,7 @@ import Home from '@/pages/Home'
 import Editor from '@/pages/Editor'
 import ContractDetail from '@/pages/ContractDetail'
 import Marketplace from '@/pages/Marketplace'
+import DebugWorkspace from '@/pages/DebugWorkspace'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/editor" element={<Editor />} />
+            <Route path="/debug" element={<DebugWorkspace />} />
             <Route path="/contract/:address" element={<ContractDetail />} />
             <Route path="/marketplace" element={<Marketplace />} />
           </Routes>

@@ -1,11 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { generateContract } from '../services/contractGenerator'
+import { debugContract } from '../services/contractDebugger'
 import { validateContract } from '../services/contractValidator'
 import { deployContract } from '../services/contractDeployer'
 import { simulateContractMethod } from '../services/contractSimulator'
 import { getContractSource, getContractState } from '../services/contractIntrospection'
 import { generateLimiter, deployLimiter } from '../middleware/rateLimiter'
+import { aiUsageLimiter, getRequestGroqApiKey } from '../middleware/aiUsageLimiter'
 import { supabase } from '../db/supabase'
 
 const router = Router()
@@ -20,11 +22,12 @@ const GenerateSchema = z.object({
 router.post(
   '/generate',
   generateLimiter,
+  aiUsageLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { description } = GenerateSchema.parse(req.body)
 
-      const result = await generateContract(description)
+      const result = await generateContract(description, getRequestGroqApiKey(req))
 
       await supabase.from('contract_generations').insert({
         generation_id: result.generationId,
@@ -37,6 +40,30 @@ router.post(
         model_used: result.modelUsed,
       })
 
+      res.json({ data: result })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+// â”€â”€â”€ Debug / Fix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+const DebugSchema = z.object({
+  code: z.string().min(1, 'Code is required'),
+  errorMessage: z.string().min(1, 'Error message is required'),
+  intent: z.string().optional(),
+  previousFix: z.string().optional(),
+})
+
+router.post(
+  '/debug',
+  generateLimiter,
+  aiUsageLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const payload = DebugSchema.parse(req.body)
+      const result = await debugContract(payload, getRequestGroqApiKey(req))
       res.json({ data: result })
     } catch (err) {
       next(err)

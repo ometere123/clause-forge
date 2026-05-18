@@ -1,8 +1,10 @@
 import Groq from 'groq-sdk'
 import { config } from '../config'
 import type { GeneratedContract, ContractStructure, ContractEstimation } from '../types'
+import { buildFrontendCallMap, extractContractStructure } from './contractAnalysis'
+import { buildGenerationSystemPrompt, buildGenerationUserPrompt } from './genlayerKnowledge'
 
-const groq = new Groq({ apiKey: config.groq.apiKey })
+const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
 const SYSTEM_PROMPT = `You are an expert GenLayer Intelligent Contract developer. Translate plain-English descriptions into production-ready Python contracts that run on GenLayer's consensus blockchain.
 
@@ -461,23 +463,26 @@ Rules:
 Return ONLY the Python code. No prose. No markdown fences.`
 
 export const generateContract = async (
-  description: string
+  description: string,
+  apiKey?: string
 ): Promise<GeneratedContract> => {
   const startTime = Date.now()
+  const groq = buildGroq(apiKey)
 
   const completion = await groq.chat.completions.create({
     model: config.groq.model,
     max_tokens: config.groq.maxTokens,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: buildUserPrompt(description) },
+      { role: 'system', content: buildGenerationSystemPrompt(description, SYSTEM_PROMPT) },
+      { role: 'user', content: buildGenerationUserPrompt(description) },
     ],
   })
 
   const rawCode = completion.choices[0]?.message?.content ?? ''
   const generatedCode = postProcess(rawCode)
 
-  const structure = extractStructure(generatedCode)
+  const structure = extractContractStructure(generatedCode)
+  const frontendCallMap = buildFrontendCallMap(structure)
   const estimation = buildEstimation(completion, Date.now() - startTime)
   const contractName = inferName(description)
 
@@ -487,6 +492,7 @@ export const generateContract = async (
     contractName,
     methods: structure.methods,
     stateVariables: structure.stateVariables,
+    frontendCallMap,
     estimation,
     originalDescription: description,
     modelUsed: config.groq.model,
@@ -494,7 +500,7 @@ export const generateContract = async (
   }
 }
 
-const buildUserPrompt = (description: string): string => `
+export const buildUserPrompt = (description: string): string => `
 Generate a GenLayer Intelligent Contract for:
 
 "${description}"
@@ -542,7 +548,7 @@ const postProcess = (code: string): string => {
   return code
 }
 
-const extractStructure = (code: string): ContractStructure => {
+export const extractStructure = (code: string): ContractStructure => {
   const methods: ContractStructure['methods'] = []
   const stateVariables: Record<string, string> = {}
 

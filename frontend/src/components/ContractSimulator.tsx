@@ -5,6 +5,7 @@ import { useWallet } from '@/hooks/useWallet'
 import { createStudionetClient } from '@/services/genLayerClient'
 import { submitToMarketplace } from '@/services/api'
 import { cn } from '@/lib/utils'
+import { getStudionetAddressUrl } from '@/utils/explorer'
 import CopyButton from '@/components/CopyButton'
 import type { ContractMethod } from '@/types'
 
@@ -80,6 +81,7 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
 
   const viewMethods = generatedContract.methods.filter((m) => !m.isWrite)
   const writeMethods = generatedContract.methods.filter((m) => m.isWrite)
+  const explorerUrl = getStudionetAddressUrl(contractAddress)
 
   const handleCall = async () => {
     if (!selectedMethod) return
@@ -149,7 +151,14 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
         <span className="w-2 h-2 bg-green-500 rounded-full shrink-0" />
         <div className="min-w-0">
           <span className="text-green-700 font-medium">Deployed on Studionet · </span>
-          <span className="font-mono text-green-600 text-xs break-all">{contractAddress}</span>
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-green-700 text-xs break-all underline underline-offset-2 hover:text-green-800"
+          >
+            {contractAddress}
+          </a>
           <CopyButton text={contractAddress} className="text-green-600 hover:bg-green-100" />
         </div>
       </div>

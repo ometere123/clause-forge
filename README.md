@@ -7,11 +7,13 @@ Describe what you want your contract to do, and Clause Forge generates, validate
 V1 focuses on the complete Studionet workflow:
 
 - Plain-English contract generation
+- Debug and fix workspace for broken GenLayer contracts
 - GenLayer Python code preview and editing
 - Static validation
 - Studionet deployment
 - Contract method simulation/interactions
 - Marketplace submission and discovery
+- 7 free Groq AI calls per day, with bring-your-own-key support for unlimited calls
 
 V2 will expand the product with full external wallet support and Bradbury testnet deployment.
 
@@ -28,6 +30,15 @@ The core workflow is:
 5. Deploy to GenLayer Studionet.
 6. Interact with deployed contract methods.
 7. Optionally submit the contract to the marketplace.
+
+Clause Forge also includes a debug workflow:
+
+1. Paste a broken GenLayer contract.
+2. Paste the GenVM error, traceback, schema error, or deploy error.
+3. Add optional context about the intended behavior.
+4. Generate a fixed contract.
+5. Review the original and fixed code side by side.
+6. If the fixed code reveals a new error, use Refix and paste the new error.
 
 ## Why We Built It
 
@@ -130,6 +141,12 @@ The validator checks for:
 - Missing `gl.Contract`
 - Missing public methods
 - Missing `@gl.public.view`
+- Public methods without typed parameters or return annotations
+- Normal Python `list` / `dict` / `set` used as persistent storage
+- Custom storage dataclasses missing `@allow_storage`
+- Payable/value methods that do not account for `gl.message.value`
+- Nondeterministic LLM calls without an obvious equivalence or validation strategy
+- Solidity-style syntax such as `msg.sender` or `block.timestamp`
 - Forbidden unsafe code
 - Risky storage scanning patterns
 
@@ -155,6 +172,44 @@ It separates:
 
 Users can pass inputs and see outputs, errors, or transaction hashes.
 
+### Debug Workspace
+
+The Debug Workspace helps builders repair GenLayer Intelligent Contracts.
+
+Users can paste:
+
+- Original contract code
+- GenVM error
+- Python traceback
+- Schema loading error
+- Deployment error
+- Original intent
+
+Clause Forge returns:
+
+- Issue category
+- Diagnosis
+- Complete fixed contract code
+- Explanation of the fix
+- Change list
+- Warnings
+- Frontend call map
+- Side-by-side original and fixed code
+- Refix workflow for follow-up errors
+
+This turns Clause Forge from only a generator into a create-and-debug workspace.
+
+### AI Usage Tiers
+
+V1.5 supports two AI access modes:
+
+- Free tier: 7 Groq calls per day
+- Bring your own Groq API key: unlimited generation and debugging
+
+User-provided Groq keys are stored in browser localStorage. They are sent with AI requests and are not saved to the Clause Forge database.
+
+Free-tier usage is tracked by `ai_usage_limits` in Supabase. If that table has not been migrated yet, the backend falls back to an in-memory limiter.
+
 ### Marketplace
 
 The marketplace lets users:
@@ -177,18 +232,47 @@ Marketplace categories include:
 
 The generator has been tuned to produce safer GenLayer contracts.
 
+The backend now includes a GenLayer Knowledge Engine with contract-specific rules for:
+
+- GenVM contract structure
+- Persistent storage
+- Schema loading
+- Nondeterministic LLM and web calls
+- Validator consensus and equivalence
+- Payable/value handling
+- Frontend call shapes
+- Common schema, storage, consensus, and integration errors
+
 It now instructs the AI to:
 
 - Always include at least one `@gl.public.view` method
 - Avoid scanning storage collections with `.values()` or `.items()`
 - Avoid list comprehensions over `TreeMap` storage
 - Use secondary indexes like `seen: TreeMap[str, u64]` for duplicate checks
+- Use `TreeMap`, `DynArray`, and `@allow_storage` for persistent storage
+- Prefer reusable platform contracts where users create records through write methods
+- Choose LLM/web logic only when the contract needs judgement, evidence, or external data
+- Use bounded JSON outputs and validation for GenLayer consensus
 - Avoid advanced features unless explicitly requested
 - Use integer math for token amounts
 - Mark paid agreements as resolved after settlement
 - Copy storage values into local variables before nondeterministic execution
 
 This helps prevent contracts that generate successfully but fail deployment, schema loading, or GenLayerJS introspection.
+
+### Frontend Call Map
+
+For generated and fixed contracts, Clause Forge now derives a frontend call map from public contract methods.
+
+The call map shows:
+
+- Method name
+- Whether the frontend should call it as a view, write, or payable write
+- Arguments to pass
+- Whether value is required
+- What the UI should refresh or display after the call
+
+This helps builders understand how to connect the generated contract to an app without guessing the ABI flow.
 
 ## API Overview
 
@@ -203,6 +287,7 @@ Important endpoints:
 ```txt
 GET  /api/v1/health
 POST /api/v1/contracts/generate
+POST /api/v1/contracts/debug
 POST /api/v1/contracts/validate
 POST /api/v1/contracts/simulate
 POST /api/v1/contracts/deploy
@@ -361,6 +446,12 @@ Migration files live in:
 
 ```txt
 database/migrations/
+```
+
+The AI free-tier quota table is defined in:
+
+```txt
+database/migrations/002_ai_usage_limits.sql
 ```
 
 ## V1 Limitations

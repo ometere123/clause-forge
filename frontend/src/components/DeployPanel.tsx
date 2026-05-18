@@ -4,6 +4,7 @@ import { useContractDeployment } from '@/hooks/useContractDeployment'
 import { useWallet } from '@/hooks/useWallet'
 import { createStudionetClient } from '@/services/genLayerClient'
 import { cn } from '@/lib/utils'
+import { getStudionetAddressUrl } from '@/utils/explorer'
 import type { DeploymentResult } from '@/types'
 
 interface DeployPanelProps {
@@ -77,6 +78,8 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
   }
 
   if (deploymentResult) {
+    const explorerUrl = getStudionetAddressUrl(deploymentResult.contractAddress)
+
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="border border-green-200 bg-green-50 rounded-xl p-6 space-y-4">
@@ -90,7 +93,14 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
           <div className="space-y-3 pt-2 border-t border-green-200">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Contract Address</p>
-              <p className="font-mono text-sm bg-white border border-green-200 px-3 py-2 rounded break-all">{deploymentResult.contractAddress}</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block font-mono text-sm bg-white border border-green-200 px-3 py-2 rounded break-all text-green-700 underline underline-offset-2 hover:text-green-800"
+              >
+                {deploymentResult.contractAddress}
+              </a>
             </div>
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Transaction Hash</p>
