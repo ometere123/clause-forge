@@ -42,6 +42,7 @@ router.get(
       const listings = (data ?? []).map((row: any) => ({
         id: row.id,
         contractAddress: row.contract_address,
+        network: row.network ?? 'studionet',
         name: row.name,
         description: row.description,
         category: row.category,
@@ -82,6 +83,7 @@ router.get(
         data: {
           id: data.id,
           contractAddress: data.contract_address,
+          network: data.network ?? 'studionet',
           name: data.name,
           description: data.description,
           category: data.category,
@@ -108,6 +110,7 @@ const SubmitSchema = z.object({
   category: z.enum(['verification', 'scoring', 'voting', 'data-enrichment', 'custom']),
   tags: z.array(z.string()).max(10).default([]),
   walletAddress: z.string().min(1),
+  network: z.enum(['studionet', 'bradbury']).default('studionet'),
   sourceCode: z.string().optional(),
 })
 
@@ -117,21 +120,35 @@ router.post(
     try {
       const payload = SubmitSchema.parse(req.body)
 
-      const { data, error } = await supabase
+      const insertPayload = {
+        contract_address: payload.contractAddress,
+        network: payload.network,
+        name: payload.name,
+        description: payload.description,
+        category: payload.category,
+        tags: payload.tags,
+        submitted_by: payload.walletAddress,
+        source_code: payload.sourceCode ?? null,
+        rating: 0,
+        forked_count: 0,
+      }
+
+      let { data, error } = await supabase
         .from('marketplace_listings')
-        .insert({
-          contract_address: payload.contractAddress,
-          name: payload.name,
-          description: payload.description,
-          category: payload.category,
-          tags: payload.tags,
-          submitted_by: payload.walletAddress,
-          source_code: payload.sourceCode ?? null,
-          rating: 0,
-          forked_count: 0,
-        })
+        .insert(insertPayload)
         .select()
         .single()
+
+      if (error && error.message.toLowerCase().includes('network')) {
+        const { network: _network, ...legacyPayload } = insertPayload
+        const retry = await supabase
+          .from('marketplace_listings')
+          .insert(legacyPayload)
+          .select()
+          .single()
+        data = retry.data
+        error = retry.error
+      }
 
       if (error) {
         res.status(500).json({ error: 'Failed to submit listing', details: error.message })
@@ -142,6 +159,7 @@ router.post(
         data: {
           id: data.id,
           contractAddress: data.contract_address,
+          network: data.network ?? payload.network,
           name: data.name,
           description: data.description,
           category: data.category,

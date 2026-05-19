@@ -3,6 +3,7 @@ import { writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import type { SimulationRequest, SimulationResult } from '../types'
+import { normalizeContractCode } from './contractCode'
 
 export const simulateContractMethod = async (
   request: SimulationRequest
@@ -109,7 +110,7 @@ except Exception as e:
 
   try {
     // Write contract code to file (as-is, no escaping issues)
-    writeFileSync(contractFile, code)
+    writeFileSync(contractFile, normalizeContractCode(code))
 
     // Write runner script to file
     writeFileSync(runnerFile, runnerScript)

@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useContractStore } from '@/store'
 import { useWallet } from '@/hooks/useWallet'
-import { createStudionetClient } from '@/services/genLayerClient'
+import { createGenLayerClient } from '@/services/genLayerClient'
 import { submitToMarketplace } from '@/services/api'
 import { cn } from '@/lib/utils'
-import { getStudionetAddressUrl } from '@/utils/explorer'
+import { getAddressExplorerUrl } from '@/utils/explorer'
+import { normalizeContractCode } from '@/utils/contractCode'
+import { getNetworkConfig } from '@/config/networks'
 import CopyButton from '@/components/CopyButton'
-import type { ContractMethod } from '@/types'
+import type { ContractMethod, Network } from '@/types'
 
 type ContractCategory = 'verification' | 'scoring' | 'voting' | 'data-enrichment' | 'custom'
 
@@ -29,9 +31,13 @@ interface SimulatorLog {
 
 interface ContractSimulatorProps {
   contractAddress: string
+  network?: Network
 }
 
-export default function ContractSimulator({ contractAddress }: ContractSimulatorProps) {
+export default function ContractSimulator({
+  contractAddress,
+  network = 'studionet',
+}: ContractSimulatorProps) {
   const { generatedContract } = useContractStore()
   const { address: walletAddress } = useWallet()
 
@@ -66,7 +72,8 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
         category: submitCategory,
         tags: submitTags.split(',').map((t) => t.trim()).filter(Boolean),
         walletAddress,
-        sourceCode: generatedContract.generatedCode,
+        network,
+        sourceCode: normalizeContractCode(generatedContract.generatedCode),
       })
       setSubmitSuccess(true)
     } catch (err: any) {
@@ -81,14 +88,15 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
 
   const viewMethods = generatedContract.methods.filter((m) => !m.isWrite)
   const writeMethods = generatedContract.methods.filter((m) => m.isWrite)
-  const explorerUrl = getStudionetAddressUrl(contractAddress)
+  const networkConfig = getNetworkConfig(network)
+  const explorerUrl = getAddressExplorerUrl(network, contractAddress)
 
   const handleCall = async () => {
     if (!selectedMethod) return
     setIsRunning(true)
 
     try {
-      const client = createStudionetClient()
+      const client = createGenLayerClient(network)
 
       // Parse inputs into correct types
       const parsedArgs = selectedMethod.inputs.map((input) => {
@@ -150,7 +158,7 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
       <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-3 text-sm">
         <span className="w-2 h-2 bg-green-500 rounded-full shrink-0" />
         <div className="min-w-0">
-          <span className="text-green-700 font-medium">Deployed on Studionet · </span>
+          <span className="text-green-700 font-medium">Deployed on {networkConfig.label} · </span>
           <a
             href={explorerUrl}
             target="_blank"
@@ -253,7 +261,7 @@ export default function ContractSimulator({ contractAddress }: ContractSimulator
             {isRunning
               ? <span className="flex items-center justify-center gap-2">
                   <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Calling on Studionet...
+                  Calling on {networkConfig.label}...
                 </span>
               : `Call ${selectedMethod?.name}()`
             }

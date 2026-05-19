@@ -3,6 +3,7 @@ import { config } from '../config'
 import type { GeneratedContract, ContractStructure, ContractEstimation } from '../types'
 import { buildFrontendCallMap, extractContractStructure } from './contractAnalysis'
 import { buildGenerationSystemPrompt, buildGenerationUserPrompt } from './genlayerKnowledge'
+import { normalizeContractCode } from './contractCode'
 
 const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
@@ -479,7 +480,7 @@ export const generateContract = async (
   })
 
   const rawCode = completion.choices[0]?.message?.content ?? ''
-  const generatedCode = postProcess(rawCode)
+  const generatedCode = normalizeContractCode(rawCode)
 
   const structure = extractContractStructure(generatedCode)
   const frontendCallMap = buildFrontendCallMap(structure)
@@ -530,23 +531,6 @@ MUST follow:
 - Real public APIs (CoinGecko, GitHub, Crossref, DOI, IPFS) or skip fetch
 
 Return ONLY the Python code.`
-
-const postProcess = (code: string): string => {
-  code = code.replace(/^```python\n?/m, '').replace(/^```\n?/m, '').replace(/```$/m, '').trim()
-
-  if (!code.includes('{ "Depends"')) {
-    code = `# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }\n` + code
-  }
-
-  if (!code.includes('from genlayer import')) {
-    const lines = code.split('\n')
-    const dependsIdx = lines.findIndex((l) => l.includes('Depends'))
-    lines.splice(dependsIdx + 1, 0, 'from genlayer import *')
-    code = lines.join('\n')
-  }
-
-  return code
-}
 
 export const extractStructure = (code: string): ContractStructure => {
   const methods: ContractStructure['methods'] = []

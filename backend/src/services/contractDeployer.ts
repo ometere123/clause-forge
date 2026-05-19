@@ -1,13 +1,23 @@
 import { createClient, createAccount } from 'genlayer-js'
 import type { DeploymentResult, DeploymentMode, Network } from '../types'
 import { config } from '../config'
+import { normalizeContractCode } from './contractCode'
 
-// Import studionet chain (v1.1.8+)
+// Import GenLayer chains (v1.1.8+)
 let studionet: any = {
   id: 61999,
   name: 'Genlayer Studio Network',
   rpcUrls: { default: { http: ['https://studio.genlayer.com/api'] } },
   nativeCurrency: { name: 'GEN Token', symbol: 'GEN', decimals: 18 },
+  testnet: true,
+}
+
+let testnetBradbury: any = {
+  id: 4221,
+  name: 'GenLayer Bradbury',
+  rpcUrls: { default: { http: ['https://rpc-bradbury.genlayer.com'] } },
+  nativeCurrency: { name: 'GEN Token', symbol: 'GEN', decimals: 18 },
+  blockExplorers: { default: { name: 'GenLayer Bradbury Explorer', url: 'https://explorer-bradbury.genlayer.com' } },
   testnet: true,
 }
 
@@ -17,13 +27,21 @@ try {
   if (chains.studionet) {
     studionet = chains.studionet
   }
+  if (chains.testnetBradbury) {
+    testnetBradbury = chains.testnetBradbury
+  }
 } catch (e) {
   // Fall back to inlined config
 }
 
-const buildClient = (privateKey: string) => {
+const getChain = (network: Network) => {
+  if (network === 'bradbury') return testnetBradbury
+  return studionet
+}
+
+const buildClient = (privateKey: string, network: Network) => {
   const account = createAccount(privateKey as `0x${string}`)
-  return createClient({ chain: studionet as any, account })
+  return createClient({ chain: getChain(network) as any, account })
 }
 
 export const deployContract = async (params: {
@@ -33,7 +51,8 @@ export const deployContract = async (params: {
   network: Network
   walletPrivateKey?: string
 }): Promise<DeploymentResult> => {
-  const { code, mode, network, walletPrivateKey } = params
+  const { mode, network, walletPrivateKey } = params
+  const code = normalizeContractCode(params.code)
 
   const privateKey = mode === 'system'
     ? config.genLayer.systemPrivateKey
@@ -44,7 +63,7 @@ export const deployContract = async (params: {
   }
 
   const account = createAccount(privateKey as `0x${string}`)
-  const client = createClient({ chain: studionet, account }) as any
+  const client = buildClient(privateKey, network) as any
 
   try {
     const hash: string = await client.deployContract({

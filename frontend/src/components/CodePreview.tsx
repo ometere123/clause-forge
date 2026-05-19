@@ -4,6 +4,7 @@ import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
 import ContractLintPanel from '@/components/ContractLintPanel'
 import FrontendCallMapPanel from '@/components/FrontendCallMapPanel'
+import { normalizeContractCode } from '@/utils/contractCode'
 
 interface CodePreviewProps {
   onDeploy: () => void
@@ -22,12 +23,14 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
   if (!generatedContract) return null
 
   const handleSave = () => {
-    setGeneratedContract({ ...generatedContract, generatedCode: editedCode })
+    const normalizedCode = normalizeContractCode(editedCode)
+    setEditedCode(normalizedCode)
+    setGeneratedContract({ ...generatedContract, generatedCode: normalizedCode })
     setIsEditing(false)
   }
 
   const handleDownload = () => {
-    const blob = new Blob([generatedContract.generatedCode], {
+    const blob = new Blob([normalizeContractCode(generatedContract.generatedCode)], {
       type: 'text/plain',
     })
     const url = URL.createObjectURL(blob)
@@ -251,7 +254,7 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
           onClick={onDeploy}
           className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition"
         >
-          Deploy to Studionet →
+          Choose Network & Deploy →
         </button>
       </div>
     </div>

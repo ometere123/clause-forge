@@ -51,7 +51,7 @@ export default function Home() {
           {
             step: '03',
             title: 'Deploy',
-            desc: 'Validate and deploy to StudioNet or Bradbury testnet.',
+            desc: 'Validate and deploy to Studionet or Bradbury testnet.',
           },
         ].map((item) => (
           <div key={item.step} className="border border-border rounded-lg p-6">

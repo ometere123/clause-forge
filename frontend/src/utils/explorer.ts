@@ -1,4 +1,8 @@
-const STUDIONET_EXPLORER_BASE_URL = 'https://explorer-studio.genlayer.com'
+import { getNetworkConfig } from '@/config/networks'
+import type { Network } from '@/types'
+
+export const getAddressExplorerUrl = (network: Network, address: string) =>
+  `${getNetworkConfig(network).explorerUrl}/transactions?address=${encodeURIComponent(address)}`
 
 export const getStudionetAddressUrl = (address: string) =>
-  `${STUDIONET_EXPLORER_BASE_URL}/transactions?address=${encodeURIComponent(address)}`
+  getAddressExplorerUrl('studionet', address)

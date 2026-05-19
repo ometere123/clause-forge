@@ -1,8 +1,8 @@
 import { createClient, createAccount, generatePrivateKey } from 'genlayer-js'
-import { studionet } from 'genlayer-js/chains'
-import { createWalletClient, custom } from 'viem'
+import { studionet, testnetBradbury } from 'genlayer-js/chains'
 import type { CalldataEncodable } from 'genlayer-js/types'
-import type { WalletAccount } from '@/types'
+import { getNetworkConfig } from '@/config/networks'
+import type { Network, WalletAccount } from '@/types'
 
 // Studionet chain ID in hex format (61999 decimal = 0xf22f hex)
 export const STUDIONET_CHAIN_ID = '0xf22f'
@@ -76,7 +76,17 @@ export const clearWallet = () => {
 
 // ─── Client Factory ──────────────────────────────────────────────────────────
 
-export const createStudionetClient = (privateKey?: string) => {
+const chainByNetwork = {
+  studionet,
+  bradbury: testnetBradbury,
+} as const
+
+export const getGenLayerChain = (network: Network = 'studionet') => chainByNetwork[network]
+
+export const createGenLayerClient = (
+  network: Network = 'studionet',
+  privateKey?: string
+) => {
   const key = privateKey ?? getOrCreateWallet().privateKey
 
   if (!key) {
@@ -86,49 +96,72 @@ export const createStudionetClient = (privateKey?: string) => {
   const account = createAccount(key as `0x${string}`)
 
   return createClient({
-    chain: studionet,
+    chain: getGenLayerChain(network),
     account,
   })
 }
 
-// ─── Injected Wallet Client (MetaMask, Rabby, etc.) ─────────────────────────
+export const createStudionetClient = (privateKey?: string) =>
+  createGenLayerClient('studionet', privateKey)
 
-export const createInjectedClient = async (userAddress?: string) => {
+export const switchInjectedWalletNetwork = async (network: Network) => {
   if (!window.ethereum) throw new Error('No injected wallet found. Install MetaMask or Rabby.')
 
-  const viemWallet = createWalletClient({
-    chain: studionet,
-    transport: custom(window.ethereum),
-  })
+  const config = getNetworkConfig(network)
 
-  // Get address from wallet if not provided
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: config.chainIdHex }],
+    })
+  } catch (switchError: any) {
+    if (switchError?.code !== 4902) throw switchError
+
+    await window.ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{
+        chainId: config.chainIdHex,
+        chainName: `GenLayer ${config.label}`,
+        rpcUrls: [config.rpcUrl],
+        blockExplorerUrls: [config.explorerUrl],
+        nativeCurrency: {
+          name: 'GEN Token',
+          symbol: 'GEN',
+          decimals: 18,
+        },
+      }],
+    })
+
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: config.chainIdHex }],
+    })
+  }
+}
+
+// ─── Injected Wallet Client (MetaMask, Rabby, etc.) ─────────────────────────
+
+export const createInjectedClient = async (
+  network: Network = 'studionet',
+  userAddress?: string
+) => {
+  if (!window.ethereum) throw new Error('No injected wallet found. Install MetaMask or Rabby.')
+
+  await switchInjectedWalletNetwork(network)
+  await window.ethereum.request({ method: 'eth_requestAccounts' })
+
   let address = userAddress as `0x${string}`
   if (!address) {
-    const addresses = await viemWallet.getAddresses()
+    const addresses = await window.ethereum.request({ method: 'eth_accounts' }) as string[]
     if (!addresses[0]) throw new Error('No addresses found in wallet')
-    address = addresses[0]
+    address = addresses[0] as `0x${string}`
   }
 
-  // Create a custom account that uses the injected wallet for signing
-  const account = {
-    address,
-    type: 'json-rpc' as const,
-    signTransaction: async (tx: any) => {
-      // viem's WalletClient handles signing via the ethereum transport
-      // Remove account from tx if present, as viemWallet is already bound to it
-      const { account: _, ...txWithoutAccount } = tx
-      return await viemWallet.signTransaction(txWithoutAccount as any)
-    },
-    signMessage: async ({ message }: any) => {
-      return await viemWallet.signMessage({ account: address, message })
-    },
-    signTypedData: async (data: any) => {
-      const { account: _, ...dataWithoutAccount } = data
-      return await viemWallet.signTypedData(dataWithoutAccount as any)
-    },
-  }
-
-  return createClient({ chain: studionet, account: account as any })
+  return createClient({
+    chain: getGenLayerChain(network),
+    account: address,
+    provider: window.ethereum,
+  })
 }
 
 // ─── Source / State Fetch ────────────────────────────────────────────────────
@@ -146,17 +179,21 @@ export const getContractSource = async (address: string): Promise<string | null>
 
 // ─── Contract Interaction ────────────────────────────────────────────────────
 
-export const readContractState = async (contractAddress: string) => {
-  const client = createStudionetClient()
+export const readContractState = async (
+  contractAddress: string,
+  network: Network = 'studionet'
+) => {
+  const client = createGenLayerClient(network)
   return client.getContractSchema(contractAddress as `0x${string}`)
 }
 
 export const callContractMethod = async (
   contractAddress: string,
   method: string,
-  args: CalldataEncodable[]
+  args: CalldataEncodable[],
+  network: Network = 'studionet'
 ) => {
-  const client = createStudionetClient()
+  const client = createGenLayerClient(network)
   return client.readContract({
     address: contractAddress as `0x${string}`,
     functionName: method,

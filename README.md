@@ -10,12 +10,13 @@ V1 focuses on the complete Studionet workflow:
 - Debug and fix workspace for broken GenLayer contracts
 - GenLayer Python code preview and editing
 - Static validation
-- Studionet deployment
+- Studionet and Bradbury deployment
 - Contract method simulation/interactions
 - Marketplace submission and discovery
 - 7 free Groq AI calls per day, with bring-your-own-key support for unlimited calls
+- Browser-generated wallet, system wallet, and injected wallet deployment paths
 
-V2 will expand the product with full external wallet support and Bradbury testnet deployment.
+V2 work has started with external wallet deployment and Bradbury testnet support. The next V2 focus is deeper production testing across wallet signing, schema loading, deployed contract interaction, and network-specific failure handling.
 
 ## What Clause Forge Does
 
@@ -27,7 +28,7 @@ The core workflow is:
 2. Generate a GenLayer Python contract using AI.
 3. Preview, inspect, edit, copy, or download the generated code.
 4. Validate the contract structure.
-5. Deploy to GenLayer Studionet.
+5. Deploy to GenLayer Studionet or Bradbury.
 6. Interact with deployed contract methods.
 7. Optionally submit the contract to the marketplace.
 
@@ -152,14 +153,16 @@ The validator checks for:
 
 ### Deployment
 
-V1 deploys to GenLayer Studionet.
+Clause Forge deploys to GenLayer Studionet and Bradbury.
 
 The app supports:
 
 - Backend/system wallet deployment
 - Browser-generated GenLayer wallets
+- External injected wallets such as MetaMask and Rabby
 - Deployment receipt handling
 - Real contract address extraction from GenLayer transaction data
+- Explorer links for deployed contract addresses
 
 ### Contract Interaction
 
@@ -462,8 +465,8 @@ Known limitations:
 
 - Contract validation is static and should become deeper.
 - Contract simulation is mocked and does not fully reproduce GenLayer runtime behavior.
-- External wallet support is partial.
-- Bradbury deployment is planned but not active in V1.
+- External wallet deployment is available, but needs more wallet-provider testing across MetaMask, Rabby, and network-switch edge cases.
+- Bradbury deployment is available, but should be tested with funded wallets and real contract examples before being treated as the primary deployment path.
 - Some generated contracts may still need manual review, especially complex escrow, payment, AI arbitration, and token custody contracts.
 - Marketplace, fork, and compose workflows need more production polish.
 
@@ -471,8 +474,8 @@ Known limitations:
 
 Planned V2 improvements:
 
-- Full external wallet integration with MetaMask, Rabby, and similar wallets
-- Bradbury testnet deployment
+- More complete external wallet interaction flows after deployment
+- Deeper Bradbury production testing
 - Better transaction status tracking
 - Stronger contract generator reliability
 - Automatic repair/regeneration when validation fails
@@ -489,4 +492,4 @@ Clause Forge V1 is a no-code GenLayer contract factory.
 
 It turns plain English into GenLayer Intelligent Contracts, gives users a code preview, validates the result, deploys to Studionet, and lets users interact with the deployed contract.
 
-V1 proves the core workflow. V2 will focus on external wallets, Bradbury deployment, generator reliability, and a stronger marketplace experience.
+V1 proves the core workflow. V2 now extends it with external wallet deployment and Bradbury support, with the next focus on deeper production testing, generator reliability, and a stronger marketplace experience.

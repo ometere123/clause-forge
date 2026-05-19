@@ -53,7 +53,7 @@ export interface FrontendCallMapItem {
 
 // ─── Deployment ─────────────────────────────────────────────────────────────
 
-export type DeploymentMode = 'system' | 'wallet'
+export type DeploymentMode = 'system' | 'wallet' | 'external-wallet'
 export type Network = 'studionet' | 'bradbury'
 export type DeploymentStatus = 'idle' | 'pending' | 'accepted' | 'finalized' | 'failed'
 
@@ -121,7 +121,10 @@ export interface WalletAccount {
   address: string
   privateKey?: string
   isGenerated: boolean
+  isExternal?: boolean
 }
+
+export type ActiveWalletType = 'browser' | 'external'
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 

@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { GENLAYER_NETWORKS, getNetworkConfig } from '@/config/networks'
+import { switchInjectedWalletNetwork } from '@/services/genLayerClient'
+import type { Network } from '@/types'
 
 interface InjectedWalletState {
   address: string | null
@@ -8,7 +11,10 @@ interface InjectedWalletState {
   error: string | null
   chainId: string | null
   isOnStudionet: boolean
-  connect: () => Promise<void>
+  isOnBradbury: boolean
+  isOnNetwork: (network: Network) => boolean
+  connect: (network?: Network) => Promise<void>
+  switchNetwork: (network: Network) => Promise<void>
   disconnect: () => void
 }
 
@@ -23,18 +29,6 @@ declare global {
   }
 }
 
-const STUDIONET_CHAIN = {
-  chainId: '0xf22f', // 61999 in hex
-  chainName: 'Genlayer Studio Network',
-  rpcUrls: ['https://studio.genlayer.com/api'],
-  blockExplorerUrls: ['https://explorer-studio.genlayer.com'],
-  nativeCurrency: {
-    name: 'GEN Token',
-    symbol: 'GEN',
-    decimals: 18,
-  },
-}
-
 export const useInjectedWallet = (): InjectedWalletState => {
   const [address, setAddress] = useState<string | null>(null)
   const [chainId, setChainId] = useState<string | null>(null)
@@ -42,7 +36,9 @@ export const useInjectedWallet = (): InjectedWalletState => {
   const [error, setError] = useState<string | null>(null)
 
   const isAvailable = typeof window !== 'undefined' && !!window.ethereum
-  const isOnStudionet = chainId === STUDIONET_CHAIN.chainId
+  const isOnStudionet = chainId === GENLAYER_NETWORKS.studionet.chainIdHex
+  const isOnBradbury = chainId === GENLAYER_NETWORKS.bradbury.chainIdHex
+  const isOnNetwork = (network: Network) => chainId === getNetworkConfig(network).chainIdHex
 
   useEffect(() => {
     if (!window.ethereum) return
@@ -78,7 +74,12 @@ export const useInjectedWallet = (): InjectedWalletState => {
     }
   }, [])
 
-  const connect = async () => {
+  const switchNetwork = async (network: Network) => {
+    await switchInjectedWalletNetwork(network)
+    setChainId(getNetworkConfig(network).chainIdHex)
+  }
+
+  const connect = async (network: Network = 'studionet') => {
     if (!window.ethereum) return
     setIsConnecting(true)
     setError(null)
@@ -89,29 +90,7 @@ export const useInjectedWallet = (): InjectedWalletState => {
       const list = accounts as string[]
       if (list.length > 0) setAddress(list[0])
 
-      // Auto-add and switch to Studionet
-      try {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [STUDIONET_CHAIN],
-        })
-        setChainId(STUDIONET_CHAIN.chainId)
-      } catch (addError: any) {
-        // If already added, switch to it
-        if (addError.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: STUDIONET_CHAIN.chainId }],
-            })
-            setChainId(STUDIONET_CHAIN.chainId)
-          } catch (switchError: any) {
-            setError(`Failed to switch to Studionet: ${switchError.message}`)
-          }
-        } else {
-          setError(`Failed to add Studionet: ${addError.message}`)
-        }
-      }
+      await switchNetwork(network)
     } catch (err: any) {
       setError(err.message ?? 'Failed to connect wallet')
       setAddress(null)
@@ -134,7 +113,10 @@ export const useInjectedWallet = (): InjectedWalletState => {
     error,
     chainId,
     isOnStudionet,
+    isOnBradbury,
+    isOnNetwork,
     connect,
+    switchNetwork,
     disconnect,
   }
 }

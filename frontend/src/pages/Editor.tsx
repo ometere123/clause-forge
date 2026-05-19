@@ -5,6 +5,7 @@ import DeployPanel from '@/components/DeployPanel'
 import ContractSimulator from '@/components/ContractSimulator'
 import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
+import type { Network } from '@/types'
 
 type EditorStep = 'describe' | 'preview' | 'deploy' | 'simulate'
 
@@ -18,6 +19,7 @@ const STEPS: { id: EditorStep; label: string }[] = [
 export default function Editor() {
   const [step, setStep] = useState<EditorStep>('describe')
   const [deployedAddress, setDeployedAddress] = useState<string | null>(null)
+  const [deployedNetwork, setDeployedNetwork] = useState<Network>('studionet')
   const { generatedContract } = useContractStore()
 
   const canNavigate = (s: EditorStep) => {
@@ -70,8 +72,9 @@ export default function Editor() {
 
       {step === 'deploy' && generatedContract && (
         <DeployPanel
-          onDeployed={(address) => {
+          onDeployed={(address, network) => {
             setDeployedAddress(address)
+            setDeployedNetwork(network)
             setStep('simulate')
           }}
         />
@@ -80,6 +83,7 @@ export default function Editor() {
       {step === 'simulate' && generatedContract && deployedAddress && (
         <ContractSimulator
           contractAddress={deployedAddress}
+          network={deployedNetwork}
         />
       )}
     </div>

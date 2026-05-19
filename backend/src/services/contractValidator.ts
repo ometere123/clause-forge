@@ -1,4 +1,5 @@
 import type { ValidationResult, ValidationError } from '../types'
+import { GENLAYER_DEPENDS_HEADER, startsWithRunnerComment } from './contractCode'
 
 // TODO Phase 3: Full implementation
 // Skeleton with all 6 validation steps ready to fill in
@@ -46,12 +47,12 @@ const runSpecChecks = (
   errors: ValidationError[],
   warnings: ValidationError[]
 ) => {
-  if (!code.includes('{ "Depends"')) {
+  if (!startsWithRunnerComment(code)) {
     errors.push({
       type: 'SpecError',
       severity: 'critical',
-      message: 'Missing Depends header',
-      suggestion: '# { "Depends": "py-genlayer:..." }',
+      message: 'Depends runner comment must be the first line with no blank space before it',
+      suggestion: GENLAYER_DEPENDS_HEADER,
     })
   }
 

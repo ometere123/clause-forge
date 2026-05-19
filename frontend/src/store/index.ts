@@ -7,6 +7,7 @@ import type {
   WalletAccount,
   DeploymentStatus,
   DeploymentStep,
+  ActiveWalletType,
 } from '@/types'
 
 interface ContractStore {
@@ -43,8 +44,12 @@ interface ContractStore {
   wallet: WalletAccount | null
   wallets: WalletAccount[]
   activeWalletIndex: number
+  activeWalletType: ActiveWalletType
+  externalWallet: WalletAccount | null
   setWallet: (wallet: WalletAccount | null) => void
   setWallets: (wallets: WalletAccount[], activeIndex: number) => void
+  setActiveWalletType: (type: ActiveWalletType) => void
+  setExternalWallet: (wallet: WalletAccount | null) => void
 
   // ─── History ───────────────────────────────────────────────────────
   contractHistory: DeploymentResult[]
@@ -91,9 +96,13 @@ export const useContractStore = create<ContractStore>()(
       wallet: null,
       wallets: [],
       activeWalletIndex: 0,
+      activeWalletType: 'browser',
+      externalWallet: null,
       setWallet: (wallet) => set({ wallet }),
       setWallets: (wallets, activeIndex) =>
         set({ wallets, activeWalletIndex: activeIndex, wallet: wallets[activeIndex] ?? null }),
+      setActiveWalletType: (type) => set({ activeWalletType: type }),
+      setExternalWallet: (externalWallet) => set({ externalWallet }),
 
       // History
       contractHistory: [],
@@ -123,6 +132,8 @@ export const useContractStore = create<ContractStore>()(
       // Only persist wallet and history across sessions
       partialize: (state) => ({
         wallet: state.wallet,
+        activeWalletType: state.activeWalletType,
+        externalWallet: state.externalWallet,
         contractHistory: state.contractHistory,
       }),
     }

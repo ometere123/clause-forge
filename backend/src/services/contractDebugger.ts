@@ -2,6 +2,7 @@ import Groq from 'groq-sdk'
 import { config } from '../config'
 import { buildFrontendCallMap, extractContractStructure } from './contractAnalysis'
 import { buildDebugSystemPrompt } from './genlayerKnowledge'
+import { normalizeContractCode } from './contractCode'
 import type { FrontendCallMapItem } from '../types'
 
 const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
@@ -92,11 +93,13 @@ Return a complete fixed contract and explain the fix.`,
 
   const content = completion.choices[0]?.message?.content ?? ''
   const parsed = parseDebugResponse(content)
-  const structure = extractContractStructure(parsed.fixedCode)
+  const fixedCode = normalizeContractCode(parsed.fixedCode)
+  const structure = extractContractStructure(fixedCode)
   const frontendCallMap = buildFrontendCallMap(structure)
 
   return {
     ...parsed,
+    fixedCode,
     frontendCallMap,
     modelUsed: config.groq.model,
   }

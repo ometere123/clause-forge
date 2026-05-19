@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { deployContract } from '@/services/api'
 import { useContractStore } from '@/store'
-import type { DeployRequest, DeploymentMode } from '@/types'
+import type { DeployRequest, DeploymentMode, Network } from '@/types'
 
 export const useContractDeployment = () => {
   const {
@@ -33,13 +33,14 @@ export const useContractDeployment = () => {
   const deploy = (
     generationId: string,
     code: string,
-    mode: DeploymentMode
+    mode: DeploymentMode,
+    network: Network = 'studionet'
   ) => {
     const payload: DeployRequest = {
       generationId,
       code,
       mode,
-      network: 'studionet',
+      network,
       ...(mode === 'wallet' && wallet?.privateKey
         ? { walletPrivateKey: wallet.privateKey }
         : {}),

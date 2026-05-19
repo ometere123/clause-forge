@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getMarketplaceListing } from '@/services/api'
 import { parseContractMethods } from '@/utils/parseContractMethods'
-import { createStudionetClient, getContractSource } from '@/services/genLayerClient'
+import { createGenLayerClient, getContractSource } from '@/services/genLayerClient'
 import { cn } from '@/lib/utils'
+import { getNetworkConfig } from '@/config/networks'
 import CopyButton from '@/components/CopyButton'
 import type { ContractMethod } from '@/types'
 
@@ -46,6 +47,8 @@ export default function ContractDetail() {
   const methods = sourceCode ? parseContractMethods(sourceCode) : []
   const viewMethods = methods.filter((m) => !m.isWrite)
   const writeMethods = methods.filter((m) => m.isWrite)
+  const network = listing?.network ?? 'studionet'
+  const networkConfig = getNetworkConfig(network)
 
   const handleSelectMethod = (m: ContractMethod) => {
     setSelectedMethod(m)
@@ -57,7 +60,7 @@ export default function ContractDetail() {
     setIsRunning(true)
 
     try {
-      const client = createStudionetClient() as any
+      const client = createGenLayerClient(network) as any
 
       const parsedArgs = selectedMethod.inputs.map((input) => {
         const raw = inputs[input.name] ?? ''
@@ -156,7 +159,7 @@ export default function ContractDetail() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-xs text-green-700 font-medium">Studionet</span>
+          <span className="text-xs text-green-700 font-medium">{networkConfig.label}</span>
         </div>
       </div>
 
@@ -276,7 +279,7 @@ export default function ContractDetail() {
                   {isRunning ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Calling on Studionet...
+                      Calling on {networkConfig.label}...
                     </span>
                   ) : (
                     `Call ${selectedMethod.name}()`

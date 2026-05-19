@@ -118,6 +118,7 @@ export const getMarketplaceListing = async (contractAddress: string) => {
   return data.data as {
     id: string
     contractAddress: string
+    network?: 'studionet' | 'bradbury'
     name: string
     description: string
     category: string
@@ -146,6 +147,7 @@ export const submitToMarketplace = async (payload: {
   category: string
   tags: string[]
   walletAddress: string
+  network?: 'studionet' | 'bradbury'
   sourceCode?: string
 }): Promise<MarketplaceListing> => {
   const { data } = await api.post('/v1/marketplace/submit', payload)

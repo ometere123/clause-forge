@@ -6,6 +6,7 @@ import { validateContract } from '../services/contractValidator'
 import { deployContract } from '../services/contractDeployer'
 import { simulateContractMethod } from '../services/contractSimulator'
 import { getContractSource, getContractState } from '../services/contractIntrospection'
+import { normalizeContractCode } from '../services/contractCode'
 import { generateLimiter, deployLimiter } from '../middleware/rateLimiter'
 import { aiUsageLimiter, getRequestGroqApiKey } from '../middleware/aiUsageLimiter'
 import { supabase } from '../db/supabase'
@@ -127,14 +128,18 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const payload = DeploySchema.parse(req.body)
+      const normalizedPayload = {
+        ...payload,
+        code: normalizeContractCode(payload.code),
+      }
 
-      const validation = validateContract(payload.code)
+      const validation = validateContract(normalizedPayload.code)
       if (!validation.isValid) {
         res.status(400).json({ error: 'Validation failed', details: validation })
         return
       }
 
-      const result = await deployContract(payload)
+      const result = await deployContract(normalizedPayload)
 
       await supabase.from('deployed_contracts').insert({
         transaction_hash: result.transactionHash,
