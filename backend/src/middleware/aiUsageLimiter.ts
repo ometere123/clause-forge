@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import { createHash } from 'crypto'
 import { supabase } from '../db/supabase'
 
-const FREE_DAILY_CALLS = 7
+const FREE_DAILY_CALLS = 3
 const usageByClient = new Map<string, { date: string; count: number }>()
 
 const todayKey = () => new Date().toISOString().slice(0, 10)

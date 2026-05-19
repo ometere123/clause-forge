@@ -24,7 +24,17 @@ export default function ApiKeyPanel() {
         <div>
           <p className="text-sm font-semibold">AI Access</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Free tier includes 7 Groq calls per day. Add your Groq key for unlimited calls.
+            Free tier includes 3 system-backed Groq calls per day. Add your own key for unlimited generation and debugging.
+            {' '}
+            <a
+              href="https://console.groq.com/keys"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:underline"
+            >
+              Get a Groq API key
+            </a>
+            .
           </p>
         </div>
         {saved && <span className="text-xs text-green-600 font-medium">Saved</span>}
