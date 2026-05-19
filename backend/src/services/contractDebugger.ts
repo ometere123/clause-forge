@@ -7,6 +7,15 @@ import type { FrontendCallMapItem } from '../types'
 
 const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
+const DEBUG_SECTIONS = [
+  'DIAGNOSIS',
+  'ISSUE_CATEGORY',
+  'FIXED_CODE',
+  'EXPLANATION',
+  'CHANGES',
+  'WARNINGS',
+] as const
+
 export interface DebugContractRequest {
   code: string
   errorMessage: string
@@ -34,22 +43,51 @@ const parseDebugResponse = (content: string): Omit<DebugContractResult, 'modelUs
 
   try {
     const parsed = JSON.parse(cleaned)
+    const fixedCode = Array.isArray(parsed.fixedCodeLines)
+      ? parsed.fixedCodeLines.join('\n')
+      : String(parsed.fixedCode ?? '')
+
     return {
       diagnosis: String(parsed.diagnosis ?? 'The error was analyzed and a fix was generated.'),
-      fixedCode: String(parsed.fixedCode ?? ''),
+      fixedCode,
       explanation: String(parsed.explanation ?? ''),
       changes: Array.isArray(parsed.changes) ? parsed.changes.map(String) : [],
       warnings: Array.isArray(parsed.warnings) ? parsed.warnings.map(String) : [],
       issueCategory: parsed.issueCategory ? String(parsed.issueCategory) : undefined,
     }
   } catch {
+    const sectionAlternation = DEBUG_SECTIONS.join('|')
+    const getSection = (name: typeof DEBUG_SECTIONS[number]) => {
+      const re = new RegExp(
+        `(?:^|\\n)${name}:\\s*([\\s\\S]*?)(?=\\n(?:${sectionAlternation}):|$)`,
+        'i'
+      )
+      return cleaned.match(re)?.[1]?.trim() ?? ''
+    }
+
+    const stripCodeFence = (value: string) =>
+      value
+        .replace(/^\s*```(?:python|py)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim()
+
+    const parseList = (value: string) =>
+      value
+        .split('\n')
+        .map((line) => line.replace(/^\s*[-*]\s*/, '').trim())
+        .filter(Boolean)
+
+    const fixedCodeSection = stripCodeFence(getSection('FIXED_CODE'))
+    const fallbackCodeBlock =
+      cleaned.match(/```(?:python|py)?\s*([\s\S]*?)```/i)?.[1]?.trim() ?? cleaned
+
     return {
-      diagnosis: 'The model returned non-JSON output. Review the fixed code manually.',
-      fixedCode: content,
-      explanation: 'Clause Forge could not parse a structured explanation from the model response.',
-      changes: [],
-      warnings: ['Structured debug response parsing failed.'],
-      issueCategory: 'unknown',
+      diagnosis: getSection('DIAGNOSIS') || 'The error was analyzed and a fix was generated.',
+      fixedCode: fixedCodeSection || fallbackCodeBlock,
+      explanation: getSection('EXPLANATION') || 'Clause Forge generated a corrected contract.',
+      changes: parseList(getSection('CHANGES')),
+      warnings: parseList(getSection('WARNINGS')),
+      issueCategory: getSection('ISSUE_CATEGORY') || 'unknown',
     }
   }
 }
@@ -63,7 +101,6 @@ export const debugContract = async (
   const completion = await groq.chat.completions.create({
     model: config.groq.model,
     max_tokens: config.groq.maxTokens,
-    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: buildDebugSystemPrompt() },
       {

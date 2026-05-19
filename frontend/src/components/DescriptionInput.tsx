@@ -53,19 +53,19 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 sm:gap-6">
       {/* Templates */}
       <div className="lg:col-span-1">
         <p className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
           Templates
         </p>
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-2">
           {TEMPLATES.map((t) => (
             <button
               key={t.id}
               onClick={() => handleTemplate(t)}
               className={cn(
-                'w-full text-left px-3 py-2.5 rounded border text-sm transition',
+                'w-full text-left px-3 py-2.5 rounded border text-sm transition min-h-12',
                 selectedTemplate === t.id
                   ? 'border-primary bg-primary/5 text-primary'
                   : 'border-border hover:border-primary/40'
@@ -87,9 +87,9 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Example: Create a contract that verifies if a claim is factually accurate using AI. Store the result as YES or NO. Anyone can submit a claim, anyone can read the result."
-            className="w-full h-44 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
+            className="w-full h-52 sm:h-44 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
           />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+          <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground mt-1">
             <span>{description.length} chars</span>
             <span>Minimum 20 characters</span>
           </div>

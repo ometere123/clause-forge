@@ -70,7 +70,24 @@ export const useContractStore = create<ContractStore>()(
       generationError: null,
 
       setDescription: (description) => set({ description }),
-      setGeneratedContract: (contract) => set({ generatedContract: contract }),
+      setGeneratedContract: (contract) =>
+        set((state) => {
+          const contractChanged =
+            contract?.generationId !== state.generatedContract?.generationId ||
+            contract?.generatedCode !== state.generatedContract?.generatedCode
+
+          return {
+            generatedContract: contract,
+            ...(contractChanged
+              ? {
+                  deploymentStatus: 'idle' as DeploymentStatus,
+                  deploymentSteps: [],
+                  deploymentResult: null,
+                  isDeploying: false,
+                }
+              : {}),
+          }
+        }),
       setIsGenerating: (loading) => set({ isGenerating: loading }),
       setGenerationError: (error) => set({ generationError: error }),
 

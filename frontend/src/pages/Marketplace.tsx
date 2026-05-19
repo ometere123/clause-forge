@@ -34,20 +34,20 @@ export default function Marketplace() {
   })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Contract Marketplace</h1>
-        <p className="text-muted-foreground">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Contract Marketplace</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Browse, fork, and compose Intelligent Contracts built by the community.
         </p>
       </div>
 
       {/* Address lookup */}
-      <div className="bg-muted/40 border border-border rounded-lg px-4 py-3 mb-8">
+      <div className="bg-muted/40 border border-border rounded-lg px-4 py-3 mb-6 sm:mb-8">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
           Inspect any contract
         </p>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 sm:flex gap-2">
           <input
             type="text"
             placeholder="0x..."
@@ -59,7 +59,7 @@ export default function Marketplace() {
           <button
             onClick={handleLookup}
             disabled={!lookupAddress.trim()}
-            className="px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition disabled:opacity-40"
+            className="px-4 py-2 sm:py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition disabled:opacity-40"
           >
             Inspect →
           </button>
@@ -76,7 +76,8 @@ export default function Marketplace() {
       />
 
       {/* Categories */}
-      <div className="flex gap-2 flex-wrap mb-8">
+      <div className="-mx-3 sm:mx-0 px-3 sm:px-0 overflow-x-auto pb-2 mb-6 sm:mb-8">
+        <div className="flex gap-2 min-w-max sm:min-w-0 sm:flex-wrap">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
@@ -90,6 +91,7 @@ export default function Marketplace() {
             {cat.label}
           </button>
         ))}
+        </div>
       </div>
 
       {/* Listings */}
@@ -114,8 +116,8 @@ export default function Marketplace() {
               to={`/contract/${listing.contractAddress}`}
               className="border border-border rounded-lg p-5 hover:shadow-md hover:border-primary/40 transition block"
             >
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-semibold">{listing.name}</h3>
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <h3 className="font-semibold min-w-0 break-words">{listing.name}</h3>
                 <span className="text-xs px-2 py-0.5 bg-accent rounded-full text-accent-foreground">
                   {listing.category}
                 </span>
@@ -123,7 +125,7 @@ export default function Marketplace() {
               <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                 {listing.description}
               </p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-muted-foreground">
                 <div className="flex gap-4">
                   <span>⭐ {listing.rating.toFixed(1)}</span>
                   <span>🔄 {listing.forkedCount} forks</span>

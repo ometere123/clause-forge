@@ -54,10 +54,10 @@ export default function DebugWorkspace() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-5 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Debug Workspace</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Debug Workspace</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Fix GenLayer Intelligent Contracts with side-by-side code and a clear repair explanation.
         </p>
       </div>
@@ -72,7 +72,7 @@ export default function DebugWorkspace() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               spellCheck={false}
-              className="w-full h-96 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-xs"
+              className="w-full h-72 sm:h-96 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-xs"
             />
           </div>
 
@@ -95,7 +95,7 @@ export default function DebugWorkspace() {
               onChange={(e) => setErrorMessage(e.target.value)}
               placeholder="Paste the schema error, deploy error, traceback, or GenVM output here."
               spellCheck={false}
-              className="w-full h-48 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-xs"
+              className="w-full h-40 sm:h-48 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-xs"
             />
           </div>
 
@@ -171,9 +171,9 @@ export default function DebugWorkspace() {
 
       {result && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-xl font-semibold">Side-by-Side Fix</h2>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 sm:flex gap-2">
               <button
                 onClick={() => navigator.clipboard.writeText(result.fixedCode)}
                 className="px-4 py-2 border border-border rounded text-sm font-medium hover:bg-accent transition"
@@ -194,7 +194,7 @@ export default function DebugWorkspace() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Original
               </p>
-              <pre className="h-[520px] overflow-auto border border-border rounded-lg p-4 text-xs font-mono whitespace-pre-wrap bg-muted/20">
+              <pre className="h-[360px] sm:h-[520px] overflow-auto border border-border rounded-lg p-4 text-xs font-mono whitespace-pre-wrap bg-muted/20">
                 {code}
               </pre>
             </div>
@@ -202,7 +202,7 @@ export default function DebugWorkspace() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Fixed
               </p>
-              <pre className="h-[520px] overflow-auto border border-border rounded-lg p-4 text-xs font-mono whitespace-pre-wrap bg-green-50">
+              <pre className="h-[360px] sm:h-[520px] overflow-auto border border-border rounded-lg p-4 text-xs font-mono whitespace-pre-wrap bg-green-50">
                 {result.fixedCode}
               </pre>
             </div>

@@ -155,10 +155,11 @@ export default function ContractSimulator({
   return (
     <div className="space-y-4">
       {/* Contract address banner */}
-      <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-3 text-sm">
+      <div className="bg-green-50 border border-green-200 rounded-lg px-3 sm:px-4 py-3 flex items-start sm:items-center gap-3 text-sm">
         <span className="w-2 h-2 bg-green-500 rounded-full shrink-0" />
         <div className="min-w-0">
-          <span className="text-green-700 font-medium">Deployed on {networkConfig.label} · </span>
+          <span className="text-green-700 font-medium block sm:inline">Deployed on {networkConfig.label}</span>
+          <span className="hidden sm:inline text-green-700 font-medium"> · </span>
           <a
             href={explorerUrl}
             target="_blank"
@@ -299,8 +300,8 @@ export default function ContractSimulator({
       </div>
 
       {/* ── Submit to Marketplace ─────────────────────────────────────────── */}
-      <div className="border border-border rounded-lg p-5 mt-2">
-        <div className="flex items-center justify-between">
+      <div className="border border-border rounded-lg p-4 sm:p-5 mt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="font-semibold text-sm">Submit to Marketplace</p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -310,7 +311,7 @@ export default function ContractSimulator({
           {!submitSuccess && (
             <button
               onClick={() => setShowSubmit((p) => !p)}
-              className="text-xs px-3 py-1.5 border border-border rounded hover:border-primary/50 transition"
+              className="text-xs px-3 py-1.5 border border-border rounded hover:border-primary/50 transition w-full sm:w-auto"
             >
               {showSubmit ? 'Cancel' : 'Submit →'}
             </button>
@@ -318,7 +319,7 @@ export default function ContractSimulator({
         </div>
 
         {submitSuccess ? (
-          <div className="mt-4 bg-green-50 border border-green-200 rounded px-4 py-3 text-sm text-green-700 flex items-center justify-between">
+          <div className="mt-4 bg-green-50 border border-green-200 rounded px-4 py-3 text-sm text-green-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span>✓ Submitted successfully!</span>
             <Link to="/marketplace" className="text-primary text-xs hover:underline">
               View in Marketplace →
@@ -351,7 +352,7 @@ export default function ContractSimulator({
             </div>
 
             {/* Category + Tags */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Category</label>
                 <select

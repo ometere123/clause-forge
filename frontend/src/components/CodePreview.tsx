@@ -8,11 +8,12 @@ import { normalizeContractCode } from '@/utils/contractCode'
 
 interface CodePreviewProps {
   onDeploy: () => void
+  onCodeChanged?: () => void
 }
 
 type Tab = 'code' | 'structure'
 
-export default function CodePreview({ onDeploy }: CodePreviewProps) {
+export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProps) {
   const { generatedContract, setGeneratedContract } = useContractStore()
   const [tab, setTab] = useState<Tab>('code')
   const [isEditing, setIsEditing] = useState(false)
@@ -24,9 +25,25 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
 
   const handleSave = () => {
     const normalizedCode = normalizeContractCode(editedCode)
+    const currentCode = normalizeContractCode(generatedContract.generatedCode)
+    const codeChanged = normalizedCode !== currentCode
+
     setEditedCode(normalizedCode)
     setGeneratedContract({ ...generatedContract, generatedCode: normalizedCode })
+    if (codeChanged) {
+      onCodeChanged?.()
+    }
     setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setEditedCode(generatedContract.generatedCode)
+    setIsEditing(false)
+  }
+
+  const handleStartEditing = () => {
+    setEditedCode(generatedContract.generatedCode)
+    setIsEditing(true)
   }
 
   const handleDownload = () => {
@@ -42,7 +59,7 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
       {/* Code panel */}
       <div className="lg:col-span-2 space-y-3">
         {/* Tabs */}
@@ -64,9 +81,14 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
         </div>
 
         {tab === 'code' ? (
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div
+            className={cn(
+              'border border-border rounded-lg overflow-hidden',
+              isEditing ? 'h-[68vh] min-h-[360px] lg:h-[420px]' : 'h-[54vh] min-h-[320px] lg:h-[420px]'
+            )}
+          >
             <Editor
-              height="420px"
+              height="100%"
               defaultLanguage="python"
               value={isEditing ? editedCode : generatedContract.generatedCode}
               onChange={(v) => setEditedCode(v ?? '')}
@@ -92,7 +114,7 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
                   ([name, type]) => (
                     <div
                       key={name}
-                      className="flex gap-2 text-sm font-mono bg-muted px-3 py-1.5 rounded"
+                      className="flex flex-wrap gap-2 text-sm font-mono bg-muted px-3 py-1.5 rounded"
                     >
                       <span className="text-primary">{name}</span>
                       <span className="text-muted-foreground">: {type}</span>
@@ -109,9 +131,9 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
                 {generatedContract.methods.map((method) => (
                   <div
                     key={method.name}
-                    className="flex items-center justify-between border border-border px-3 py-2 rounded text-sm"
+                    className="flex items-center justify-between gap-3 border border-border px-3 py-2 rounded text-sm"
                   >
-                    <span className="font-mono font-medium text-primary">
+                    <span className="font-mono font-medium text-primary truncate">
                       {method.name}()
                     </span>
                     <span
@@ -134,7 +156,7 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 sm:flex gap-2">
           {isEditing ? (
             <>
               <button
@@ -144,7 +166,7 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
                 Save Changes
               </button>
               <button
-                onClick={() => setIsEditing(false)}
+                onClick={handleCancel}
                 className="flex-1 py-2 border border-border rounded font-medium text-sm"
               >
                 Cancel
@@ -153,7 +175,7 @@ export default function CodePreview({ onDeploy }: CodePreviewProps) {
           ) : (
             <>
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={handleStartEditing}
                 className="flex-1 py-2 border border-border rounded font-medium text-sm hover:bg-accent"
               >
                 Edit

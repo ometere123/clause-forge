@@ -29,13 +29,13 @@ export default function ApiKeyPanel() {
         </div>
         {saved && <span className="text-xs text-green-600 font-medium">Saved</span>}
       </div>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 sm:flex gap-2">
         <input
           type="password"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="gsk_..."
-          className="flex-1 px-3 py-2 border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+          className="col-span-2 sm:col-span-1 sm:flex-1 px-3 py-2 border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
         />
         <button
           onClick={handleSave}

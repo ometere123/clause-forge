@@ -128,7 +128,7 @@ export default function ContractDetail() {
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
+      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-20 text-center space-y-4">
         <p className="text-destructive font-medium">Contract not found.</p>
         <p className="text-sm text-muted-foreground">
           This address is not in the marketplace and could not be fetched from Studionet.
@@ -141,17 +141,17 @@ export default function ContractDetail() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-5 sm:space-y-6">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <Link to="/marketplace" className="text-xs text-muted-foreground hover:text-primary transition">
               ← Marketplace
             </Link>
           </div>
-          <h1 className="text-2xl font-bold">Contract Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Contract Dashboard</h1>
           <div className="flex items-center gap-1.5 mt-1">
             <p className="font-mono text-sm text-muted-foreground break-all">{address}</p>
             <CopyButton text={address ?? ''} />
@@ -164,14 +164,14 @@ export default function ContractDetail() {
       </div>
 
       {methods.length === 0 ? (
-        <div className="border border-border rounded-lg p-10 text-center space-y-2">
+        <div className="border border-border rounded-lg p-6 sm:p-10 text-center space-y-2">
           <p className="font-medium">No methods found</p>
           <p className="text-sm text-muted-foreground">
             Could not parse contract methods from source. The contract may use an unsupported format.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
 
           {/* Method list */}
           <div className="space-y-4">

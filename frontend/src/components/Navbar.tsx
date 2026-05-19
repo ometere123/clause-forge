@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronDown, Plus, Wallet } from 'lucide-react'
+import { ChevronDown, Menu, Plus, Wallet, X } from 'lucide-react'
 import { useWallet } from '@/hooks/useWallet'
 import { cn } from '@/lib/utils'
 import { useState, useRef, useEffect } from 'react'
@@ -29,6 +29,7 @@ export default function Navbar() {
     disconnectExternalWallet,
   } = useWallet()
   const [open, setOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [walletError, setWalletError] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -41,6 +42,11 @@ export default function Navbar() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  useEffect(() => {
+    setMobileNavOpen(false)
+    setOpen(false)
+  }, [pathname])
 
   const handleSelectExternal = async () => {
     setWalletError(null)
@@ -65,14 +71,14 @@ export default function Navbar() {
 
   return (
     <nav className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-3">
 
         <Link to="/" className="flex items-center gap-2">
-          <img src="/clause-forge-logo.png" alt="Clause Forge" className="h-14 w-auto" />
-          <span className="font-bold text-lg tracking-tight whitespace-nowrap text-primary">Clause Forge</span>
+          <img src="/clause-forge-logo.png" alt="Clause Forge" className="h-11 sm:h-14 w-auto" />
+          <span className="hidden sm:inline font-bold text-lg tracking-tight whitespace-nowrap text-primary">Clause Forge</span>
         </Link>
 
-        <div className="flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.to}
@@ -91,22 +97,22 @@ export default function Navbar() {
           <div className="relative">
             <button
               onClick={() => setOpen((p) => !p)}
-              className="flex items-center gap-2 text-xs font-mono bg-muted px-3 py-1.5 rounded-full hover:bg-muted/80 transition"
+              className="flex items-center gap-1.5 sm:gap-2 text-xs font-mono bg-muted px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-muted/80 transition max-w-[44vw] sm:max-w-none"
             >
               <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-              <span className="font-sans text-muted-foreground">
+              <span className="font-sans text-muted-foreground hidden sm:inline">
                 {activeWalletType === 'external'
                   ? 'External'
                   : wallets.length > 1
                     ? `#${activeWalletIndex + 1}`
                     : 'Wallet'}
               </span>
-              <span>{shortAddress ?? 'Loading...'}</span>
+              <span className="truncate">{shortAddress ?? 'Loading...'}</span>
               <ChevronDown className="w-3 h-3 text-muted-foreground" />
             </button>
 
             {open && (
-              <div className="absolute right-0 mt-2 w-80 bg-background border border-border rounded-lg shadow-lg py-1 z-50">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-80 sm:w-80 bg-background border border-border rounded-lg shadow-lg py-1 z-50">
                 <div className="px-3 py-2 border-b border-border">
                   <p className="text-xs font-semibold">{activeWalletLabel}</p>
                   <p className="text-[11px] text-muted-foreground">One active deployer at a time</p>
@@ -203,9 +209,39 @@ export default function Navbar() {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((p) => !p)}
+            className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent transition"
+            aria-label="Toggle navigation"
+          >
+            {mobileNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
 
       </div>
+
+      {mobileNavOpen && (
+        <div className="md:hidden border-t border-border bg-background px-3 py-2">
+          <div className="grid grid-cols-2 gap-2">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={cn(
+                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  pathname === link.to
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </nav>
   )
 }

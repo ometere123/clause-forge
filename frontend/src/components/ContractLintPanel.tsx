@@ -97,7 +97,7 @@ export default function ContractLintPanel({
 
   return (
     <div className="border border-border rounded-lg p-4 space-y-4">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">{title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -107,7 +107,7 @@ export default function ContractLintPanel({
         <button
           onClick={runScan}
           disabled={isLoading || !code.trim()}
-          className="px-3 py-1.5 border border-border rounded text-xs font-medium hover:bg-accent transition disabled:opacity-50"
+          className="px-3 py-1.5 border border-border rounded text-xs font-medium hover:bg-accent transition disabled:opacity-50 w-full sm:w-auto"
         >
           {isLoading ? 'Scanning...' : 'Rescan'}
         </button>

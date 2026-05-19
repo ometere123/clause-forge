@@ -128,8 +128,8 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
     const explorerUrl = getAddressExplorerUrl(deploymentResult.network, deploymentResult.contractAddress)
 
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="border border-green-200 bg-green-50 rounded-xl p-6 space-y-4">
+      <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6">
+        <div className="border border-green-200 bg-green-50 rounded-xl p-4 sm:p-6 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xl font-bold">✓</div>
             <div>
@@ -153,7 +153,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Transaction Hash</p>
               <p className="font-mono text-sm bg-white border border-green-200 px-3 py-2 rounded break-all">{deploymentResult.transactionHash}</p>
             </div>
-            <div className="flex gap-6 text-sm">
+            <div className="grid grid-cols-1 sm:flex gap-3 sm:gap-6 text-sm">
               <div><p className="text-xs text-muted-foreground">Network</p><p className="font-medium capitalize">{deploymentResult.network}</p></div>
               <div><p className="text-xs text-muted-foreground">Deployed at</p><p className="font-medium">{new Date(deploymentResult.deployedAt).toLocaleTimeString()}</p></div>
               <div><p className="text-xs text-muted-foreground">Mode</p><p className="font-medium">{formatDeploymentMode(deploymentResult.mode)}</p></div>
@@ -171,11 +171,11 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6">
       {/* Contract summary */}
-      <div className="border border-border rounded-xl p-5 space-y-2">
+      <div className="border border-border rounded-xl p-4 sm:p-5 space-y-2">
         <p className="font-semibold">{generatedContract.contractName}</p>
-        <div className="flex gap-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-3 sm:gap-4 text-sm text-muted-foreground">
           <span>{generatedContract.methods.filter(m => !m.isWrite).length} view methods</span>
           <span>{generatedContract.methods.filter(m => m.isWrite).length} write methods</span>
         </div>
@@ -190,9 +190,9 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
       </div>
 
       {/* Network */}
-      <div className="border border-border rounded-xl p-5 space-y-3">
+      <div className="border border-border rounded-xl p-4 sm:p-5 space-y-3">
         <p className="text-sm font-semibold">Network</p>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Object.values(GENLAYER_NETWORKS).map((network) => (
             <button
               key={network.id}
@@ -227,7 +227,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
       </div>
 
       {/* Deployer mode */}
-      <div className="border border-border rounded-xl p-5 space-y-3">
+      <div className="border border-border rounded-xl p-4 sm:p-5 space-y-3">
         <p className="text-sm font-semibold">Deploy with</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
@@ -264,7 +264,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
       </div>
 
       {/* Cost estimate */}
-      <div className="border border-border rounded-xl p-5 flex justify-between items-center text-sm">
+      <div className="border border-border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between text-sm">
         <div>
           <p className="font-medium">Estimated generation cost</p>
           <p className="text-muted-foreground text-xs mt-0.5">Gas for deployment depends on contract size</p>

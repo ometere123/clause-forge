@@ -191,5 +191,27 @@ export const buildDebugSystemPrompt = () => [
   VALUE_RULES,
   FRONTEND_RULES,
   DEBUG_RULES,
-  'Return ONLY valid JSON with keys: diagnosis, fixedCode, explanation, changes, warnings, issueCategory.',
+  `Return ONLY this structured text format. Do not return JSON.
+
+DIAGNOSIS:
+Short diagnosis of the issue.
+
+ISSUE_CATEGORY:
+schema | storage | consensus | web_llm | value_message | frontend | syntax | unknown
+
+FIXED_CODE:
+\`\`\`python
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+from genlayer import *
+# full corrected contract code here
+\`\`\`
+
+EXPLANATION:
+Why this fix solves the problem.
+
+CHANGES:
+- One concrete change per line.
+
+WARNINGS:
+- Any remaining assumptions or risks. Use "- None" if no warnings.`,
 ].join('\n\n')

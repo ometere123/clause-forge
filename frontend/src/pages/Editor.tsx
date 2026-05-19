@@ -22,6 +22,11 @@ export default function Editor() {
   const [deployedNetwork, setDeployedNetwork] = useState<Network>('studionet')
   const { generatedContract } = useContractStore()
 
+  const clearCurrentDeployment = () => {
+    setDeployedAddress(null)
+    setDeployedNetwork('studionet')
+  }
+
   const canNavigate = (s: EditorStep) => {
     if (s === 'describe') return true
     if (!generatedContract) return false
@@ -30,15 +35,16 @@ export default function Editor() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
       {/* Step Indicator */}
-      <div className="flex items-center gap-2 mb-10">
+      <div className="-mx-3 sm:mx-0 px-3 sm:px-0 overflow-x-auto pb-2 mb-6 sm:mb-10">
+        <div className="flex items-center gap-2 min-w-max">
         {STEPS.map((s, i) => (
           <div key={s.id} className="flex items-center gap-2">
             <button
               onClick={() => canNavigate(s.id) && setStep(s.id)}
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition',
+                'flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition whitespace-nowrap',
                 step === s.id
                   ? 'bg-primary text-primary-foreground'
                   : canNavigate(s.id)
@@ -54,18 +60,25 @@ export default function Editor() {
               </span>
               <span className="capitalize">{s.label}</span>
             </button>
-            {i < STEPS.length - 1 && <div className="w-8 h-px bg-border" />}
+            {i < STEPS.length - 1 && <div className="w-5 sm:w-8 h-px bg-border" />}
           </div>
         ))}
+        </div>
       </div>
 
       {/* Step Content */}
       {step === 'describe' && (
-        <DescriptionInput onGenerated={() => setStep('preview')} />
+        <DescriptionInput
+          onGenerated={() => {
+            clearCurrentDeployment()
+            setStep('preview')
+          }}
+        />
       )}
 
       {step === 'preview' && generatedContract && (
         <CodePreview
+          onCodeChanged={clearCurrentDeployment}
           onDeploy={() => setStep('deploy')}
         />
       )}
