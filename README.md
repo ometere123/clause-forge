@@ -13,7 +13,7 @@ V1 focuses on the complete Studionet workflow:
 - Studionet and Bradbury deployment
 - Contract method simulation/interactions
 - Marketplace submission and discovery
-- 7 free Groq AI calls per day, with bring-your-own-key support for unlimited calls
+- 3 free system-backed Groq AI calls per day, with bring-your-own-key support for unlimited calls
 - Browser-generated wallet, system wallet, and injected wallet deployment paths
 
 V2 work has started with external wallet deployment and Bradbury testnet support. The next V2 focus is deeper production testing across wallet signing, schema loading, deployed contract interaction, and network-specific failure handling.
@@ -206,7 +206,7 @@ This turns Clause Forge from only a generator into a create-and-debug workspace.
 
 V1.5 supports two AI access modes:
 
-- Free tier: 7 Groq calls per day
+- Free tier: 3 system-backed Groq calls per day
 - Bring your own Groq API key: unlimited generation and debugging
 
 User-provided Groq keys are stored in browser localStorage. They are sent with AI requests and are not saved to the Clause Forge database.
