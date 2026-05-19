@@ -7,7 +7,7 @@ import { normalizeContractCode } from './contractCode'
 
 const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
-const SYSTEM_PROMPT = `You are an expert GenLayer Intelligent Contract developer. Translate plain-English descriptions into production-ready Python contracts that run on GenLayer's consensus blockchain.
+const SYSTEM_PROMPT = `You are an expert GenLayer Intelligent Contract developer. Translate plain-English descriptions into production-ready GenLayer Intelligent Contracts in Python that run on GenLayer's consensus blockchain.
 
 GenLayer contracts can: call LLMs, fetch live web data, screenshot pages, make AI decisions — all with validator consensus.
 
@@ -42,7 +42,15 @@ Note: __init__ args are provided at deploy time by the deployer. Use them when t
 SCHEMA-SAFE GENERATION RULES
 Generate contracts that can be deployed and introspected by GenLayerJS getContractSchema.
 - Every contract MUST expose at least one @gl.public.view method, even when the main behavior is write-only.
+- The returned .py file MUST contain Python code only. Never append explanations, reports, markdown, notes, CHANGES, WARNINGS, or plain English after the final method.
+- If extra context is needed, put it outside the code response, never inside the contract file.
 - Prefer simple, schema-stable architecture first: state vars, TreeMap lookups, bounded write methods, explicit view getters.
+- Avoid optional/nested storage such as score: Score | None or score=None. Use flat fields plus has_score flags.
+- Public method inputs must be frontend-friendly: str, int, bool, and address strings/Address. Do not require DynArray[PayoutSplit], Rubric, or dataclass objects as public args.
+- Public methods should not return list[u64] or list[str]. Return a manually built JSON string for lists, tables, nested records, score reports, and storage object views.
+- Do not use json.dumps(obj.__dict__) on storage objects; manually build JSON and convert u64/u256/Address-like values clearly.
+- For subjective AI judging/scoring/evaluation/mediation/disputes, do not use strict equality. Use leader_fn, validator_fn, and gl.vm.run_nondet_unsafe with shape/range/reason validation.
+- If response_format="json" is used, validate the returned dict directly when it is already parsed; do not blindly json.loads(raw.strip()).
 - Do NOT scan storage collections with .values(), .items(), list comprehensions, generator expressions, or loops over TreeMap contents. For uniqueness, keep a secondary index like seen_hashes: TreeMap[str, u64].
 - Use TreeMap membership only with the exact key type, or use m.get(key, default_value) when a default makes sense.
 - Do NOT use events, payable methods, transfers, cross-contract calls, web fetches, or AI unless the user description explicitly requires them.
@@ -461,7 +469,7 @@ Rules:
         return self.count
 \`\`\`
 
-Return ONLY the Python code. No prose. No markdown fences.`
+Return ONLY the GenLayer Intelligent Contract in Python. No prose. No markdown fences.`
 
 export const generateContract = async (
   description: string,
@@ -520,6 +528,9 @@ MUST follow:
 - __init__(self) only — no args
 - At least one @gl.public.view getter method for schema/UI inspection
 - Keep generated code schema-safe: no TreeMap .values()/.items(), no list comprehensions over storage, no scanning storage collections
+- Keep public inputs frontend-safe: no DynArray/dataclass/Rubric/PayoutSplit public parameters
+- For complex/list view output, return manually built JSON strings; never json.dumps(storage_obj.__dict__)
+- Avoid Optional storage and None defaults; use explicit fields and has_* flags
 - For duplicate checks, use a secondary TreeMap index such as seen: TreeMap[str, u64]
 - All nondet ops in ONE run_nondet_unsafe(leader_fn, validator_fn)
 - LLM returns bounded JSON enums; validator checks shape not content
@@ -530,7 +541,7 @@ MUST follow:
 - Duplicate check before any keyed insert
 - Real public APIs (CoinGecko, GitHub, Crossref, DOI, IPFS) or skip fetch
 
-Return ONLY the Python code.`
+Return ONLY the GenLayer Intelligent Contract in Python.`
 
 export const extractStructure = (code: string): ContractStructure => {
   const methods: ContractStructure['methods'] = []

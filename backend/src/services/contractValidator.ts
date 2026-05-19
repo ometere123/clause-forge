@@ -40,6 +40,53 @@ const runSyntaxChecks = (code: string, errors: ValidationError[]) => {
   if (!code.trim()) {
     errors.push({ type: 'SyntaxError', severity: 'critical', message: 'Contract is empty' })
   }
+
+  const appendedTextLine = findAppendedPlainEnglishLine(code)
+  if (appendedTextLine) {
+    errors.push({
+      type: 'SyntaxError',
+      severity: 'critical',
+      message: `Plain English text appears inside the .py contract file at line ${appendedTextLine.lineNumber}: "${appendedTextLine.text}"`,
+      suggestion:
+        'Delete appended explanations/reports after the final contract method. The contract file must contain only Python code, comments, or strings.',
+    })
+  }
+}
+
+const findAppendedPlainEnglishLine = (code: string) => {
+  const lines = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+  let seenContractClass = false
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    if (/^class\s+\w+\s*\(\s*gl\.Contract\s*\)\s*:/.test(trimmed)) {
+      seenContractClass = true
+      continue
+    }
+
+    if (!seenContractClass || !trimmed || line.startsWith(' ') || line.startsWith('\t')) {
+      continue
+    }
+
+    const looksLikeCode =
+      trimmed.startsWith('#') ||
+      /^(from|import)\s+/.test(trimmed) ||
+      /^@/.test(trimmed) ||
+      /^(class|def)\s+/.test(trimmed) ||
+      /^[A-Za-z_]\w*\s*(?::[^=]+)?=/.test(trimmed)
+
+    const looksLikePlainEnglish =
+      /^(?:This|The|It|We|I|Fixed|Changed|Added|Removed|Note|Warning|Explanation|Frontend|GenLayer)\b/i.test(trimmed) &&
+      /\s/.test(trimmed)
+
+    if (!looksLikeCode && looksLikePlainEnglish) {
+      return { lineNumber: i + 1, text: trimmed }
+    }
+  }
+
+  return null
 }
 
 const runSpecChecks = (
@@ -138,6 +185,26 @@ const runPublicMethodChecks = (
       })
     }
 
+    if (returnType && /\blist\s*(?:\[|$)/.test(returnType.trim())) {
+      warnings.push({
+        type: 'FrontendWarning',
+        severity: 'warning',
+        message: `Public method ${name} returns a Python list type`,
+        suggestion:
+          'For GenLayer/frontend safety, return a manually built JSON string for lists, tables, nested records, or winner/submission arrays.',
+      })
+    }
+
+    if (returnType && isCustomPublicReturnType(returnType.trim())) {
+      warnings.push({
+        type: 'SchemaWarning',
+        severity: 'warning',
+        message: `Public method ${name} returns custom type ${returnType.trim()}`,
+        suggestion:
+          'Prefer primitive returns or a manually built JSON string instead of returning storage dataclass objects directly.',
+      })
+    }
+
     const userParams = params
       .split(',')
       .map((p) => p.trim())
@@ -145,6 +212,10 @@ const runPublicMethodChecks = (
 
     for (const param of userParams) {
       const withoutDefault = param.replace(/=.*/, '').trim()
+      const typeAnnotation = withoutDefault.includes(':')
+        ? withoutDefault.split(':').slice(1).join(':').trim()
+        : ''
+
       if (!withoutDefault.includes(':')) {
         errors.push({
           type: 'SchemaError',
@@ -162,8 +233,79 @@ const runPublicMethodChecks = (
           suggestion: 'For public ABI inputs, prefer int and cast internally to u64/u256 after validation.',
         })
       }
+
+      if (/\bOptional\s*\[|\|\s*None\b/.test(typeAnnotation)) {
+        errors.push({
+          type: 'SchemaError',
+          severity: 'critical',
+          message: `Parameter "${withoutDefault}" in ${name} uses an optional type`,
+          suggestion:
+            'Avoid Optional/T | None in public GenLayer interfaces. Use explicit values and a boolean has_* flag when needed.',
+        })
+      }
+
+      if (/\b(DynArray|TreeMap|Array)\s*\[/.test(typeAnnotation)) {
+        warnings.push({
+          type: 'FrontendWarning',
+          severity: 'warning',
+          message: `Parameter "${withoutDefault}" in ${name} requires a GenLayer collection type`,
+          suggestion:
+            'Public write methods should accept frontend-friendly str/int/bool/address values. Use comma-separated strings or separate add_* methods instead.',
+        })
+      }
+
+      if (
+        /^[A-Z]\w+$/.test(typeAnnotation) &&
+        typeAnnotation !== 'Address' &&
+        !/^bytes\d+$/.test(typeAnnotation)
+      ) {
+        warnings.push({
+          type: 'FrontendWarning',
+          severity: 'warning',
+          message: `Parameter "${withoutDefault}" in ${name} requires custom type ${typeAnnotation}`,
+          suggestion:
+            'Do not require the frontend to construct GenLayer dataclass objects. Flatten this into simple int/str/bool/address parameters.',
+        })
+      }
     }
   }
+}
+
+const isCustomPublicReturnType = (typeName: string) => {
+  const normalized = typeName.replace(/\s/g, '')
+  const simpleReturns = new Set([
+    'None',
+    'str',
+    'int',
+    'bool',
+    'bytes',
+    'dict',
+    'Address',
+    'u8',
+    'u16',
+    'u24',
+    'u32',
+    'u64',
+    'u128',
+    'u160',
+    'u256',
+    'i8',
+    'i16',
+    'i32',
+    'i64',
+    'i128',
+    'i256',
+  ])
+
+  if (simpleReturns.has(normalized)) {
+    return false
+  }
+
+  if (/^dict\[/.test(normalized)) {
+    return false
+  }
+
+  return /^[A-Z]\w+$/.test(normalized)
 }
 
 const runStorageChecks = (
@@ -174,6 +316,26 @@ const runStorageChecks = (
   const stateLines = code.match(/^\s{4}[A-Za-z_]\w*\s*:\s*[^\n#]+/gm) ?? []
 
   for (const line of stateLines) {
+    if (/\bOptional\s*\[|\|\s*None\b/.test(line)) {
+      errors.push({
+        type: 'StorageError',
+        severity: 'critical',
+        message: `Optional persistent storage can break GenLayer schema/storage: ${line.trim()}`,
+        suggestion:
+          'Replace optional nested objects with explicit fields and flags, for example has_score plus score_* fields.',
+      })
+    }
+
+    if (/=\s*None\b/.test(line)) {
+      errors.push({
+        type: 'StorageError',
+        severity: 'critical',
+        message: `Persistent storage default uses None: ${line.trim()}`,
+        suggestion:
+          'Avoid storing None in GenLayer storage. Use default primitive values and a has_* boolean flag.',
+      })
+    }
+
     if (/\b(list|dict|set)\s*(\[|$)/.test(line)) {
       errors.push({
         type: 'StorageError',
@@ -246,6 +408,26 @@ const runStorageChecks = (
       suggestion: 'Declare TreeMap/DynArray at class level and do not instantiate them with {} or [] in __init__.',
     })
   }
+
+  if (/self\.\w+\s*=\s*None\b/.test(code) || /\w+\s*=\s*None\b/.test(code)) {
+    warnings.push({
+      type: 'StorageWarning',
+      severity: 'warning',
+      message: 'Contract assigns None, which is risky for GenLayer storage/schema flows',
+      suggestion:
+        'Use explicit defaults such as empty strings, zero scores, and has_* booleans instead of None.',
+    })
+  }
+
+  if (/json\.dumps\s*\([^)]*\.__dict__/.test(code) || /\.__dict__/.test(code)) {
+    errors.push({
+      type: 'SchemaError',
+      severity: 'critical',
+      message: 'Contract serializes storage objects with __dict__',
+      suggestion:
+        'Do not use json.dumps(obj.__dict__) on GenLayer storage objects. Manually build JSON and convert u64/u256/Address/DynArray values clearly.',
+    })
+  }
 }
 
 const runPayableChecks = (code: string, warnings: ValidationError[]) => {
@@ -315,7 +497,7 @@ const runSecurityChecks = (
     errors.push({
       type: 'SyntaxError',
       severity: 'critical',
-      message: 'Solidity-style syntax detected in a GenLayer Python contract',
+      message: 'Solidity-style syntax detected in a GenLayer Intelligent Contract in Python',
       suggestion: 'Use gl.message.sender_address, frontend-passed timestamps, and Python class syntax.',
     })
   }
@@ -333,6 +515,10 @@ const runSecurityChecks = (
 const runConsensusChecks = (code: string, warnings: ValidationError[]) => {
   const usesNondetPrompt = code.includes('gl.nondet.exec_prompt')
   const usesAnyPrompt = usesNondetPrompt || code.includes('gl.exec_prompt')
+  const usesJsonResponseFormat = /response_format\s*=\s*["']json["']/.test(code)
+  const usesStrictEquality = /\bstrict_eq\b|eq_principle_strict_eq/.test(code)
+  const looksSubjective =
+    /score|scoring|judge|judging|evaluate|evaluation|mediate|mediation|dispute|adjudicat|reasoning|rubric|bounty|winner|impact|innovation|presentation/i.test(code)
   const hasEquivalence =
     code.includes('gl.eq_principle') ||
     code.includes('gl.vm.run_nondet_unsafe') ||
@@ -371,6 +557,26 @@ const runConsensusChecks = (code: string, warnings: ValidationError[]) => {
       severity: 'warning',
       message: 'Decision-making LLM call may be missing response_format="json"',
       suggestion: 'Use bounded JSON output and validate enum fields before storing.',
+    })
+  }
+
+  if (usesJsonResponseFormat && /json\.loads\s*\(/.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'Contract uses json.loads even though response_format="json" is requested',
+      suggestion:
+        'If exec_prompt returns an already parsed dict, validate it directly. Only parse strings after checking the returned type.',
+    })
+  }
+
+  if (usesStrictEquality && usesNondetPrompt && looksSubjective) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'Strict equality is risky for subjective AI judging/scoring/evaluation',
+      suggestion:
+        'Use leader_fn + validator_fn + gl.vm.run_nondet_unsafe. Validate required fields, score ranges such as 0-100, and reason strings.',
     })
   }
 
