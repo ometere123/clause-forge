@@ -1,5 +1,5 @@
 import type { ValidationResult, ValidationError } from '../types'
-import { GENLAYER_DEPENDS_HEADER, startsWithRunnerComment } from './contractCode'
+import { GENLAYER_REQUIRED_HEADER, startsWithRunnerComment } from './contractCode'
 
 // TODO Phase 3: Full implementation
 // Skeleton with all 6 validation steps ready to fill in
@@ -98,8 +98,8 @@ const runSpecChecks = (
     errors.push({
       type: 'SpecError',
       severity: 'critical',
-      message: 'Depends runner comment must be the first line with no blank space before it',
-      suggestion: GENLAYER_DEPENDS_HEADER,
+      message: 'Contract header must start with # v0.2.16 or # v0.2.17 on line 1 and the Depends runner comment on line 2',
+      suggestion: GENLAYER_REQUIRED_HEADER,
     })
   }
 
@@ -129,6 +129,19 @@ const runSpecChecks = (
     })
   }
 
+  const contractClasses = code.match(/class\s+\w+\s*\(\s*gl\.Contract\s*\)\s*:/g) ?? []
+  if (contractClasses.length !== 1) {
+    errors.push({
+      type: 'SpecError',
+      severity: 'critical',
+      message:
+        contractClasses.length === 0
+          ? 'Exactly one gl.Contract class is required, but none were found'
+          : 'Only one gl.Contract class is allowed per contract file',
+      suggestion: 'Keep one deployable contract class per .py file.',
+    })
+  }
+
   if (!code.includes('@gl.public')) {
     errors.push({
       type: 'SpecError',
@@ -151,6 +164,24 @@ const runSpecChecks = (
       type: 'SpecWarning',
       severity: 'warning',
       message: 'Missing __init__ method',
+    })
+  }
+
+  if (/@gl\.public\.(?:view|write)(?:\.payable)?\s+def\s+__init__/.test(code)) {
+    errors.push({
+      type: 'SpecError',
+      severity: 'critical',
+      message: '__init__ must not be decorated as a public method',
+      suggestion: 'Remove @gl.public.* above __init__. Only callable methods should be public.',
+    })
+  }
+
+  if (/@gl\.public(?!\.(?:view|write)(?:\.payable)?\s)/.test(code)) {
+    errors.push({
+      type: 'SpecError',
+      severity: 'critical',
+      message: 'Unsupported public decorator detected',
+      suggestion: 'Use only @gl.public.view, @gl.public.write, or @gl.public.write.payable.',
     })
   }
 

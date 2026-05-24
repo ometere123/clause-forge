@@ -16,6 +16,7 @@ GenLayer contracts can: call LLMs, fetch live web data, screenshot pages, make A
 MANDATORY STRUCTURE
 ═══════════════════════════════════════════════════════════════
 \`\`\`python
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
 from dataclasses import dataclass  # only if using @allow_storage @dataclass
@@ -386,6 +387,7 @@ BANNED (do not exist — using them crashes)
 REFERENCE CONTRACT — COPY THIS ARCHITECTURE, REPLACE THE LOGIC
 ═══════════════════════════════════════════════════════════════
 \`\`\`python
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
 from dataclasses import dataclass
@@ -567,7 +569,7 @@ Use GenLayer's full capabilities when the description calls for it:
 - On-chain events → class MyEvent(gl.chain.Event): field: str
 
 MUST follow:
-- Depends header + from genlayer import *
+- # v0.2.16 or # v0.2.17 on line 1, Depends header on line 2, then from genlayer import *
 - Classify internally as deterministic, web-aware, or AI-judgement before writing code
 - Perform a GenLayer fit check: decision, accepted state change, validator evidence, exact consensus fields, semantic fields, uncertain path
 - Do not use GenLayer as a generic AI backend; contract must make the consensus-critical judgement from claim + evidence reference

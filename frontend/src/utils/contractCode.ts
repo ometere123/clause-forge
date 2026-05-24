@@ -1,6 +1,9 @@
+export const GENLAYER_VERSION_HEADER = '# v0.2.16'
 export const GENLAYER_DEPENDS_HEADER =
   '# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }'
+export const GENLAYER_REQUIRED_HEADER = `${GENLAYER_VERSION_HEADER}\n${GENLAYER_DEPENDS_HEADER}`
 
+const VERSION_LINE_RE = /^\s*#\s*v0\.2\.(?:16|17)\s*$/i
 const DEPENDS_LINE_RE = /^\s*#\s*\{\s*"Depends"\s*:\s*"py-genlayer:[^"]+"\s*\}\s*$/i
 const REPORT_HEADING_RE =
   /^(?:A\.\s+|B\.\s+|C\.\s+|D\.\s+|E\.\s+|DIAGNOSIS|ISSUE_CATEGORY|EXPLANATION|CHANGES|WARNINGS|NOTES|WHAT\s+CHANGED|WHAT\s+THIS\s+CONTRACT\s+DOES|FRONTEND\s+CALLS|GENLAYER-SPECIFIC\s+NOTES|POSSIBLE\s+LIMITATIONS)\b/i
@@ -29,6 +32,7 @@ const stripTrailingReportText = (source: string): string => {
     }
 
     const looksLikeCode =
+      VERSION_LINE_RE.test(trimmed) ||
       DEPENDS_LINE_RE.test(trimmed) ||
       /^(from|import)\s+/.test(trimmed) ||
       /^@/.test(trimmed) ||
@@ -55,12 +59,17 @@ export const normalizeContractCode = (source: string): string => {
     .trim()
 
   const rawLines = code.split('\n')
+  const firstVersionIndex = rawLines.findIndex((line) => VERSION_LINE_RE.test(line))
+  const versionLine =
+    rawLines.find((line) => VERSION_LINE_RE.test(line))?.trim() ?? GENLAYER_VERSION_HEADER
   const firstDependsIndex = rawLines.findIndex((line) => DEPENDS_LINE_RE.test(line))
   const firstImportIndex = rawLines.findIndex((line) => line.includes('from genlayer import'))
 
-  if (firstDependsIndex > 0) {
+  if (firstVersionIndex > 0) {
+    code = rawLines.slice(firstVersionIndex).join('\n')
+  } else if (firstVersionIndex === -1 && firstDependsIndex > 0) {
     code = rawLines.slice(firstDependsIndex).join('\n')
-  } else if (firstDependsIndex === -1 && firstImportIndex > 0) {
+  } else if (firstVersionIndex === -1 && firstDependsIndex === -1 && firstImportIndex > 0) {
     code = rawLines.slice(firstImportIndex).join('\n')
   }
 
@@ -68,15 +77,15 @@ export const normalizeContractCode = (source: string): string => {
 
   const bodyLines = code
     .split('\n')
-    .filter((line) => !DEPENDS_LINE_RE.test(line))
+    .filter((line) => !VERSION_LINE_RE.test(line) && !DEPENDS_LINE_RE.test(line))
 
-  let normalized = [GENLAYER_DEPENDS_HEADER, ...bodyLines].join('\n')
+  let body = bodyLines.join('\n').trimStart()
 
-  if (!normalized.includes('from genlayer import')) {
-    const lines = normalized.split('\n')
-    lines.splice(1, 0, 'from genlayer import *')
-    normalized = lines.join('\n')
+  if (!body.includes('from genlayer import')) {
+    body = `from genlayer import *\n${body}`.trimEnd()
   }
+
+  const normalized = [versionLine, GENLAYER_DEPENDS_HEADER, '', body].join('\n')
 
   return normalized.replace(/\n{3,}/g, '\n\n').trimEnd()
 }

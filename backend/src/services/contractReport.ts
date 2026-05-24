@@ -6,6 +6,15 @@ import type {
 } from '../types'
 
 const hasAny = (text: string, patterns: RegExp[]) => patterns.some((pattern) => pattern.test(text))
+const hasWorkingHeader = (code: string) => {
+  const lines = code.replace(/^\uFEFF/, '').split(/\r?\n/)
+  return (
+    /^#\s*v0\.2\.(?:16|17)\s*$/.test(lines[0] ?? '') &&
+    /^\s*#\s*\{\s*"Depends"\s*:\s*"py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6"\s*\}\s*$/.test(
+      lines[1] ?? ''
+    )
+  )
+}
 
 export const classifyContractKind = (description: string, code: string): ContractKind => {
   const combined = `${description}\n${code}`.toLowerCase()
@@ -249,15 +258,15 @@ const scanBadPatterns = (code: string, kind: ContractKind, callMap: FrontendCall
 
   const checks: ContractGenerationReport['badPatternReport'] = [
     {
-      pattern: 'current py-genlayer runner hash',
-      status: code.startsWith('# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }')
+      pattern: 'working GenLayer Studio header',
+      status: hasWorkingHeader(code)
         ? 'pass'
         : /py-genlayer:test/.test(code)
         ? 'fail'
         : 'warning',
       detail: /py-genlayer:test/.test(code)
         ? 'py-genlayer:test is only appropriate for local throwaway testing.'
-        : 'Use the documented py-genlayer runner hash as the first line.',
+        : 'Use # v0.2.16 or # v0.2.17 on line 1 and the py-genlayer Depends runner hash on line 2.',
     },
     {
       pattern: 'dict/list persistent storage',
