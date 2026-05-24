@@ -29,6 +29,50 @@ export interface ContractEstimation {
   capabilities: ContractCapabilities
 }
 
+export type ContractKind = 'deterministic' | 'web-aware' | 'ai-judgement'
+
+export interface ContractGenerationReport {
+  contractKind: ContractKind
+  whatThisContractDoes: string
+  whyGenLayer: string
+  fitCheck: {
+    genLayerDecision: string
+    acceptedStateChange: string
+    validatorEvidence: string
+    exactAgreementFields: string[]
+    semanticAgreementFields: string[]
+    uncertainRejectedAppealedPath: string
+  }
+  stateTransitions: string[]
+  consensusCriticalFields: {
+    exact: string[]
+    semantic: string[]
+  }
+  responsibilityBoundary: {
+    insideContract: string[]
+    outsideContract: string[]
+  }
+  equivalenceStrategy: {
+    strategy: string
+    explanation: string
+  }
+  sourceOfTruth: {
+    genLayer: string[]
+    offChain: string[]
+  }
+  frontendBackendCallTable: {
+    frontend: string[]
+    backend: string[]
+  }
+  integrationNotes: string[]
+  testPlan: string[]
+  badPatternReport: Array<{
+    pattern: string
+    status: 'pass' | 'warning' | 'fail'
+    detail: string
+  }>
+}
+
 export interface GeneratedContract {
   generationId: string
   generatedCode: string
@@ -36,6 +80,7 @@ export interface GeneratedContract {
   methods: ContractMethod[]
   stateVariables: Record<string, string>
   frontendCallMap?: FrontendCallMapItem[]
+  generationReport?: ContractGenerationReport
   estimation: ContractEstimation
   originalDescription: string
   modelUsed: string

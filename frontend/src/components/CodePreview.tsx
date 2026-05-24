@@ -4,6 +4,7 @@ import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
 import ContractLintPanel from '@/components/ContractLintPanel'
 import FrontendCallMapPanel from '@/components/FrontendCallMapPanel'
+import ContractGenerationReportPanel from '@/components/ContractGenerationReportPanel'
 import { normalizeContractCode } from '@/utils/contractCode'
 
 interface CodePreviewProps {
@@ -206,28 +207,35 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
         {/* Cost estimate */}
         <div className="border border-border rounded-lg p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Estimation
+            {generatedContract.modelUsed === 'manual-import' ? 'Source' : 'Estimation'}
           </p>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tokens in</span>
-              <span className="font-mono">
-                {generatedContract.estimation.tokensInput}
-              </span>
+          {generatedContract.modelUsed === 'manual-import' ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Imported existing contract.</p>
+              <p>No Groq calls were used.</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tokens out</span>
-              <span className="font-mono">
-                {generatedContract.estimation.tokensOutput}
-              </span>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tokens in</span>
+                <span className="font-mono">
+                  {generatedContract.estimation.tokensInput}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tokens out</span>
+                <span className="font-mono">
+                  {generatedContract.estimation.tokensOutput}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-2">
+                <span className="font-medium">Cost</span>
+                <span className="font-mono font-medium">
+                  ${generatedContract.estimation.estimatedCostUsd.toFixed(6)}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between border-t border-border pt-2">
-              <span className="font-medium">Cost</span>
-              <span className="font-mono font-medium">
-                ${generatedContract.estimation.estimatedCostUsd.toFixed(6)}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Capabilities */}
@@ -270,6 +278,8 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
         </div>
 
         <ContractLintPanel code={generatedContract.generatedCode} />
+
+        <ContractGenerationReportPanel report={generatedContract.generationReport} />
 
         {/* CTA Button */}
         <button

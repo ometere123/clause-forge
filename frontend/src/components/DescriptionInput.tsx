@@ -3,6 +3,7 @@ import { useContractGeneration } from '@/hooks/useContractGeneration'
 import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
 import ApiKeyPanel from '@/components/ApiKeyPanel'
+import { createImportedContract } from '@/utils/contractImport'
 
 const TEMPLATES = [
   {
@@ -31,15 +32,28 @@ const TEMPLATES = [
   },
 ]
 
+const IMPORT_PLACEHOLDER = `# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+from genlayer import *
+
+class MyContract(gl.Contract):
+    ...`
+
 interface DescriptionInputProps {
   onGenerated: () => void
 }
 
 export default function DescriptionInput({ onGenerated }: DescriptionInputProps) {
+  const [mode, setMode] = useState<'generate' | 'paste'>('generate')
   const [description, setDescription] = useState('')
+  const [existingCode, setExistingCode] = useState('')
+  const [importError, setImportError] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const { generate, isLoading } = useContractGeneration()
-  const { generationError } = useContractStore()
+  const {
+    generationError,
+    setDescription: setStoredDescription,
+    setGeneratedContract,
+  } = useContractStore()
 
   const handleGenerate = async () => {
     if (description.trim().length < 20) return
@@ -50,10 +64,114 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
   const handleTemplate = (template: typeof TEMPLATES[number]) => {
     setDescription(template.example)
     setSelectedTemplate(template.id)
+    setMode('generate')
+  }
+
+  const handleImport = () => {
+    setImportError(null)
+
+    if (existingCode.trim().length < 40) {
+      setImportError('Paste a complete GenLayer Intelligent Contract in Python.')
+      return
+    }
+
+    try {
+      const importedContract = createImportedContract(existingCode)
+      if (
+        !importedContract.generatedCode.includes('class') ||
+        !importedContract.generatedCode.includes('gl.Contract')
+      ) {
+        setImportError('The pasted code must include a contract class that extends gl.Contract.')
+        return
+      }
+
+      setStoredDescription(importedContract.originalDescription)
+      setGeneratedContract(importedContract)
+      onGenerated()
+    } catch (error: any) {
+      setImportError(error?.message ?? 'Could not import this contract.')
+    }
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 sm:gap-6">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg border border-border bg-muted/30 p-1">
+        <button
+          onClick={() => setMode('generate')}
+          className={cn(
+            'rounded-md px-4 py-2.5 text-sm font-semibold transition',
+            mode === 'generate'
+              ? 'bg-background text-primary shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Generate from description
+        </button>
+        <button
+          onClick={() => setMode('paste')}
+          className={cn(
+            'rounded-md px-4 py-2.5 text-sm font-semibold transition',
+            mode === 'paste'
+              ? 'bg-background text-primary shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Paste existing contract
+        </button>
+      </div>
+
+      {mode === 'paste' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 sm:gap-6">
+          <div className="lg:col-span-1 space-y-3">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Import
+            </p>
+            <div className="border border-border rounded-lg px-4 py-3 text-sm text-muted-foreground space-y-2">
+              <p>Paste a complete GenLayer Intelligent Contract in Python.</p>
+              <p>This path skips AI generation and does not use Groq calls.</p>
+            </div>
+          </div>
+
+          <div className="lg:col-span-3 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold mb-2">
+                Existing contract code
+              </label>
+              <textarea
+                value={existingCode}
+                onChange={(e) => setExistingCode(e.target.value)}
+                placeholder={IMPORT_PLACEHOLDER}
+                spellCheck={false}
+                className="w-full h-[56vh] min-h-[360px] px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-xs sm:text-sm"
+              />
+              <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground mt-1">
+                <span>{existingCode.length} chars</span>
+                <span>Code will be normalized before preview/deploy</span>
+              </div>
+            </div>
+
+            {importError && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
+                {importError}
+              </p>
+            )}
+
+            <button
+              onClick={handleImport}
+              disabled={existingCode.trim().length < 40}
+              className={cn(
+                'w-full py-3 rounded-lg font-semibold text-sm transition',
+                existingCode.trim().length < 40
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              )}
+            >
+              Preview Existing Contract
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 sm:gap-6">
       {/* Templates */}
       <div className="lg:col-span-1">
         <p className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
@@ -132,6 +250,8 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
           )}
         </button>
       </div>
+        </div>
+      )}
     </div>
   )
 }

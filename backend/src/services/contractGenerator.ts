@@ -4,6 +4,7 @@ import type { GeneratedContract, ContractStructure, ContractEstimation } from '.
 import { buildFrontendCallMap, extractContractStructure } from './contractAnalysis'
 import { buildGenerationSystemPrompt, buildGenerationUserPrompt } from './genlayerKnowledge'
 import { normalizeContractCode } from './contractCode'
+import { buildContractGenerationReport } from './contractReport'
 
 const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
@@ -44,12 +45,28 @@ Generate contracts that can be deployed and introspected by GenLayerJS getContra
 - Every contract MUST expose at least one @gl.public.view method, even when the main behavior is write-only.
 - The returned .py file MUST contain Python code only. Never append explanations, reports, markdown, notes, CHANGES, WARNINGS, or plain English after the final method.
 - If extra context is needed, put it outside the code response, never inside the contract file.
+- Internally classify the request before code generation as deterministic, web-aware, or AI-judgement. Do not force AI/web calls when deterministic logic is enough.
+- Perform a GenLayer fit check before code: exact decision, accepted state change, validator evidence, exact agreement fields, semantic fields, and uncertain/rejected/appealed path.
+- Do not use GenLayer as a generic AI backend where frontend/backend asks AI and the contract only stores the result.
+- GenLayer should perform the consensus-critical judgement from claim + evidence reference; frontend/backend should not be final truth.
+- Keep the contract responsibility narrow: verified state, final status, public methods, evidence references, and compact reasoning. Keep UI, Firebase/Admin SDK, private keys, file uploads, notifications, analytics, private auth, and raw archives off-chain.
+- Define allowed state transitions and reject duplicate submissions, invalid appeals, finalising pending records, judging final records, and overwriting final results.
+- Every judgement contract must have an uncertain path such as ESCALATED, NEEDS_REVIEW, UNDETERMINED, or UNVERIFIABLE.
+- AI prompts must use labelled TASK, RULES, CLAIM, UNTRUSTED EVIDENCE, and OUTPUT FORMAT sections.
+- Never ask AI to do deterministic checks such as empty strings, positive numbers, duplicate IDs, owner permissions, enum membership, list length, or arithmetic.
+- Use public/independently verifiable evidence. Avoid private screenshots/chats/hidden database-only evidence as the sole source of truth.
+- Store compact on-chain judgement fields: verdict/status/reason_code/short_reason/evidence_url/submitter/confidence_band. Keep long detail off-chain.
 - Prefer simple, schema-stable architecture first: state vars, TreeMap lookups, bounded write methods, explicit view getters.
 - Avoid optional/nested storage such as score: Score | None or score=None. Use flat fields plus has_score flags.
 - Public method inputs must be frontend-friendly: str, int, bool, and address strings/Address. Do not require DynArray[PayoutSplit], Rubric, or dataclass objects as public args.
 - Public methods should not return list[u64] or list[str]. Return a manually built JSON string for lists, tables, nested records, score reports, and storage object views.
 - Do not use json.dumps(obj.__dict__) on storage objects; manually build JSON and convert u64/u256/Address-like values clearly.
 - For subjective AI judging/scoring/evaluation/mediation/disputes, do not use strict equality. Use leader_fn, validator_fn, and gl.vm.run_nondet_unsafe with shape/range/reason validation.
+- Use strict_eq only for exact stable outputs. Use prompt_comparative when validators compare conclusions. Use prompt_non_comparative when validators judge whether the leader output satisfies criteria.
+- Never write raw nondeterministic output directly to storage without an equivalence guard.
+- AI prompts must force compact valid JSON, no markdown, no explanation outside JSON, and bounded enum values.
+- Validate AI enum fields after parsing. Invalid verdict/status/reason_code/confidence/confidence_band must escalate, never approve.
+- Use LOW/MEDIUM/HIGH confidence_band for consensus-critical logic; exact confidence can be display-only.
 - If response_format="json" is used, validate the returned dict directly when it is already parsed; do not blindly json.loads(raw.strip()).
 - Do NOT scan storage collections with .values(), .items(), list comprehensions, generator expressions, or loops over TreeMap contents. For uniqueness, keep a secondary index like seen_hashes: TreeMap[str, u64].
 - Use TreeMap membership only with the exact key type, or use m.get(key, default_value) when a default makes sense.
@@ -58,6 +75,7 @@ Generate contracts that can be deployed and introspected by GenLayerJS getContra
 - For split payments and token amounts, use integer math only. Never use float. Prefer // for division of u256 amounts.
 - Do not settle a paid agreement twice. After release/refund/split, mark status as resolved and reject future settlement calls.
 - Copy storage values into local variables before nondeterministic leader functions; do not read self.x inside leader_fn.
+- Reject or rewrite time.time(), datetime.now(), random.random(), uuid.uuid4(), requests.get(), normal Python HTTP libraries, frontend-only verification, Firebase as final truth, hidden admin mutation without checks, and vague prompts.
 
 ═══════════════════════════════════════════════════════════════
 STORAGE TYPES — ONLY THESE VALID IN STATE VARIABLES
@@ -378,9 +396,11 @@ from dataclasses import dataclass
 class Evaluation:
     subject: str
     submitted_by: Address
-    classification: str   # enum: verified | suspicious | unverifiable
-    confidence: u64       # 0-100, produced by LLM (never hardcoded)
-    reasoning: str
+    status: str           # enum: approved | rejected | escalated
+    reason_code: str      # enum-like short code
+    confidence: u64       # 0-100, display-only
+    confidence_band: str  # enum: LOW | MEDIUM | HIGH
+    short_reason: str
 
 
 class SmartEvaluator(gl.Contract):
@@ -402,23 +422,30 @@ class SmartEvaluator(gl.Contract):
         if len(subject) == 0:
             raise gl.vm.UserError("Subject cannot be empty")
 
-        # 3. ONE comprehensive prompt — bounded enums, all in one call
-        prompt = f"""You are an expert evaluator.
+        # 3. ONE comprehensive prompt with labelled sections and bounded enums
+        prompt = f"""TASK:
+Evaluate whether the submitted subject should be approved, rejected, or escalated.
 
-Subject: {subject}
-Context: {context}
+RULES:
+- Approve only when the context clearly supports the subject.
+- Reject when the context clearly contradicts the subject.
+- Escalate when evidence is weak, missing, contradictory, or ambiguous.
+- Return only compact valid JSON. No markdown. No text outside JSON.
 
-Return ONLY this JSON (no other text):
+CLAIM:
+{subject}
+
+UNTRUSTED EVIDENCE:
+{context}
+
+OUTPUT FORMAT:
 {{
-  "classification": "verified | suspicious | unverifiable",
+  "status": "approved | rejected | escalated",
+  "reason_code": "SUPPORTED | CONTRADICTED | INSUFFICIENT_EVIDENCE | NEEDS_REVIEW",
   "confidence": 0,
-  "reasoning": "one sentence"
+  "confidence_band": "LOW | MEDIUM | HIGH",
+  "short_reason": "one short sentence"
 }}
-
-Rules:
-- classification MUST be exactly one of: verified, suspicious, unverifiable
-- confidence is an integer 0-100
-- If evidence is weak, use unverifiable — never guess
 """
         prompt_copy = prompt  # copy to local var before nondet block
         def leader_fn():
@@ -428,10 +455,16 @@ Rules:
             if not isinstance(leaders_res, gl.vm.Return):
                 return False
             r = leaders_res.calldata
-            if r.get("classification") not in ("verified", "suspicious", "unverifiable"):
+            if r.get("status") not in ("approved", "rejected", "escalated"):
+                return False
+            if r.get("reason_code") not in ("SUPPORTED", "CONTRADICTED", "INSUFFICIENT_EVIDENCE", "NEEDS_REVIEW"):
                 return False
             c = r.get("confidence")
             if not isinstance(c, int) or not (0 <= c <= 100):
+                return False
+            if r.get("confidence_band") not in ("LOW", "MEDIUM", "HIGH"):
+                return False
+            if not isinstance(r.get("short_reason"), str):
                 return False
             return True
 
@@ -443,9 +476,11 @@ Rules:
         self.evaluations[eval_id] = Evaluation(
             subject=subject,
             submitted_by=gl.message.sender_address,
-            classification=result["classification"],
+            status=result["status"],
+            reason_code=result["reason_code"],
             confidence=u64(result["confidence"]),
-            reasoning=result["reasoning"],
+            confidence_band=result["confidence_band"],
+            short_reason=result["short_reason"],
         )
         self.seen[subject] = eval_id
         return eval_id
@@ -459,9 +494,11 @@ Rules:
         return {
             "id": eid,
             "subject": e.subject,
-            "classification": e.classification,
+            "status": e.status,
+            "reason_code": e.reason_code,
             "confidence": e.confidence,
-            "reasoning": e.reasoning,
+            "confidence_band": e.confidence_band,
+            "short_reason": e.short_reason,
         }
 
     @gl.public.view
@@ -492,6 +529,12 @@ export const generateContract = async (
 
   const structure = extractContractStructure(generatedCode)
   const frontendCallMap = buildFrontendCallMap(structure)
+  const generationReport = buildContractGenerationReport({
+    description,
+    code: generatedCode,
+    structure,
+    frontendCallMap,
+  })
   const estimation = buildEstimation(completion, Date.now() - startTime)
   const contractName = inferName(description)
 
@@ -502,6 +545,7 @@ export const generateContract = async (
     methods: structure.methods,
     stateVariables: structure.stateVariables,
     frontendCallMap,
+    generationReport,
     estimation,
     originalDescription: description,
     modelUsed: config.groq.model,
@@ -524,6 +568,10 @@ Use GenLayer's full capabilities when the description calls for it:
 
 MUST follow:
 - Depends header + from genlayer import *
+- Classify internally as deterministic, web-aware, or AI-judgement before writing code
+- Perform a GenLayer fit check: decision, accepted state change, validator evidence, exact consensus fields, semantic fields, uncertain path
+- Do not use GenLayer as a generic AI backend; contract must make the consensus-critical judgement from claim + evidence reference
+- Define allowed state transitions and reject invalid transitions, duplicate submissions, overwriting final results, and invalid appeals
 - State vars at CLASS level (auto-init, never assign DynArray/TreeMap in __init__)
 - __init__(self) only — no args
 - At least one @gl.public.view getter method for schema/UI inspection
@@ -534,12 +582,19 @@ MUST follow:
 - For duplicate checks, use a secondary TreeMap index such as seen: TreeMap[str, u64]
 - All nondet ops in ONE run_nondet_unsafe(leader_fn, validator_fn)
 - LLM returns bounded JSON enums; validator checks shape not content
+- AI prompts use labelled TASK, RULES, CLAIM, UNTRUSTED EVIDENCE, OUTPUT FORMAT sections
+- AI handles malformed JSON/invalid enum values by escalating or reverting, never approving
+- AI judgement uses verdict/status/reason_code/confidence_band/short_reason, not exact long free-text matching
+- Never ask AI to do deterministic checks; use Python for empty strings, positive numbers, duplicate IDs, roles, enum membership, length, arithmetic
 - @allow_storage @dataclass for complex state (not dict/list)
 - f-string JSON braces doubled: {{ and }}
 - String params for user-supplied lists, not DynArray params
 - raise gl.vm.UserError("msg") for errors
 - Duplicate check before any keyed insert
 - Real public APIs (CoinGecko, GitHub, Crossref, DOI, IPFS) or skip fetch
+- Do not use py-genlayer:test outside local/test mode
+- Do not put UI, Firebase/Admin SDK, private keys, uploads, notifications, or large analytics inside the contract
+- GenLayer is source of truth for final judgement/status/dispute/appeal/reward state; backend is only a convenience mirror
 
 Return ONLY the GenLayer Intelligent Contract in Python.`
 

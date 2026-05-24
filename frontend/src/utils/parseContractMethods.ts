@@ -40,6 +40,7 @@ export function parseContractMethods(source: string): ContractMethod[] {
       inputs,
       outputs: returnType !== 'None' ? [{ name: 'result', type: returnType }] : [],
       isWrite,
+      isPayable: decorator.includes('.payable'),
     })
   }
 

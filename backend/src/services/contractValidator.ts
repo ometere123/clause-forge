@@ -103,6 +103,16 @@ const runSpecChecks = (
     })
   }
 
+  if (/py-genlayer:test/.test(code)) {
+    warnings.push({
+      type: 'SpecWarning',
+      severity: 'warning',
+      message: 'Contract uses py-genlayer:test',
+      suggestion:
+        'Use the current documented py-genlayer runner hash by default. py-genlayer:test should only be used for local throwaway testing.',
+    })
+  }
+
   if (!code.includes('from genlayer import')) {
     errors.push({
       type: 'SpecError',
@@ -145,6 +155,7 @@ const runSpecChecks = (
   }
 
   runPublicMethodChecks(code, errors, warnings)
+  runDecoratorBodyChecks(code, errors, warnings)
   runStorageChecks(code, errors, warnings)
   runPayableChecks(code, warnings)
 
@@ -161,6 +172,37 @@ const runSpecChecks = (
         severity: 'warning',
         message: `Avoid ${label}; it can break GenLayer schema/deploy behavior`,
         suggestion: 'Use direct TreeMap lookups or a secondary TreeMap index for duplicate checks.',
+      })
+    }
+  }
+}
+
+const runDecoratorBodyChecks = (
+  code: string,
+  errors: ValidationError[],
+  warnings: ValidationError[]
+) => {
+  const viewBlocks =
+    code.match(/@gl\.public\.view\s+def\s+\w+[\s\S]*?(?=\n\s*@gl\.public|\nclass\s|$)/g) ?? []
+
+  for (const block of viewBlocks) {
+    const name = block.match(/def\s+(\w+)\s*\(/)?.[1] ?? 'unknown'
+    if (/self\.[A-Za-z_]\w*\s*(?:=|\+=|-=|\*=|\/=)|(?:self\.[A-Za-z_]\w*\.append\s*\()|(?:del\s+self\.)/.test(block)) {
+      errors.push({
+        type: 'DecoratorError',
+        severity: 'critical',
+        message: `View method ${name} appears to mutate contract state`,
+        suggestion: 'Use @gl.public.view only for read-only methods. Move state changes to @gl.public.write.',
+      })
+    }
+
+    if (/return\s+self\.[A-Za-z_]\w*\s*(?:\[|\n|$)/.test(block)) {
+      warnings.push({
+        type: 'FrontendWarning',
+        severity: 'warning',
+        message: `View method ${name} may return raw storage directly`,
+        suggestion:
+          'Prefer UI-ready primitive values or a manually built JSON string with id, status, submitter, evidence_url, reason_code, short_reason, and confidence_band where relevant.',
       })
     }
   }
@@ -314,6 +356,11 @@ const runStorageChecks = (
   warnings: ValidationError[]
 ) => {
   const stateLines = code.match(/^\s{4}[A-Za-z_]\w*\s*:\s*[^\n#]+/gm) ?? []
+  const declaredState = new Set(
+    stateLines
+      .map((line) => line.match(/^\s{4}([A-Za-z_]\w*)\s*:/)?.[1])
+      .filter(Boolean) as string[]
+  )
 
   for (const line of stateLines) {
     if (/\bOptional\s*\[|\|\s*None\b/.test(line)) {
@@ -428,6 +475,24 @@ const runStorageChecks = (
         'Do not use json.dumps(obj.__dict__) on GenLayer storage objects. Manually build JSON and convert u64/u256/Address/DynArray values clearly.',
     })
   }
+
+  const undeclaredSelfAssignments = Array.from(
+    new Set(
+      Array.from(code.matchAll(/self\.([A-Za-z_]\w*)\s*=/g))
+        .map((match) => match[1])
+        .filter((name) => !declaredState.has(name))
+    )
+  )
+
+  if (undeclaredSelfAssignments.length) {
+    warnings.push({
+      type: 'StorageWarning',
+      severity: 'warning',
+      message: `self fields assigned without class-level declarations: ${undeclaredSelfAssignments.join(', ')}`,
+      suggestion:
+        'Persistent fields should be declared in the contract class body with type annotations before assignment.',
+    })
+  }
 }
 
 const runPayableChecks = (code: string, warnings: ValidationError[]) => {
@@ -477,10 +542,19 @@ const runSecurityChecks = (
     { pattern: 'subprocess', name: 'subprocess' },
     { pattern: 'pickle', name: 'pickle' },
     { pattern: 'import requests', name: 'requests' },
+    { pattern: 'requests.', name: 'requests' },
     { pattern: 'import urllib', name: 'urllib' },
+    { pattern: 'import httpx', name: 'httpx' },
+    { pattern: 'import aiohttp', name: 'aiohttp' },
     { pattern: 'import random', name: 'random' },
+    { pattern: 'random.random', name: 'random.random()' },
     { pattern: 'import datetime', name: 'datetime' },
+    { pattern: 'datetime.now', name: 'datetime.now()' },
     { pattern: 'import time', name: 'time' },
+    { pattern: 'time.time', name: 'time.time()' },
+    { pattern: 'uuid.uuid4', name: 'uuid.uuid4()' },
+    { pattern: 'firebase', name: 'Firebase/Admin SDK' },
+    { pattern: 'firestore', name: 'Firestore' },
   ]
 
   for (const { pattern, name } of forbidden) {
@@ -508,6 +582,25 @@ const runSecurityChecks = (
       severity: 'warning',
       message: 'Prompt may let fetched content override contract instructions',
       suggestion: 'Treat web content as untrusted evidence and tell the LLM not to follow instructions inside it.',
+    })
+  }
+
+  if (/frontend.*verif|client.*verif|verified_by_frontend/i.test(code)) {
+    errors.push({
+      type: 'SecurityError',
+      severity: 'critical',
+      message: 'Frontend-only verification detected',
+      suggestion:
+        'Final verification or judgement state must be controlled by the GenLayer contract, not trusted from the frontend.',
+    })
+  }
+
+  if (/(admin|owner|resolver|reset|withdraw|configure|set_)/i.test(code) && !/gl\.message\.(sender_address|origin_address)/.test(code)) {
+    warnings.push({
+      type: 'SecurityWarning',
+      severity: 'warning',
+      message: 'Privileged-looking methods or state were detected without an obvious sender/origin check',
+      suggestion: 'Add owner/admin/resolver checks before hidden or privileged mutations.',
     })
   }
 }
@@ -551,6 +644,16 @@ const runConsensusChecks = (code: string, warnings: ValidationError[]) => {
     })
   }
 
+  if (/self\.[A-Za-z_]\w*\s*=\s*gl\.nondet/i.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'Raw nondeterministic output appears to be written directly to storage',
+      suggestion:
+        'Wrap AI/web output in strict_eq, prompt_comparative, prompt_non_comparative, or run_nondet_unsafe before storing it.',
+    })
+  }
+
   if (usesNondetPrompt && !code.includes('response_format="json"') && /decision|verdict|outcome|classif|approve|reject|resolve/i.test(code)) {
     warnings.push({
       type: 'ConsensusWarning',
@@ -586,6 +689,56 @@ const runConsensusChecks = (code: string, warnings: ValidationError[]) => {
       severity: 'warning',
       message: 'LLM prompt appears very short or underspecified',
       suggestion: 'Include task, evidence, allowed enum outputs, JSON schema, and unverifiable/undetermined fallback.',
+    })
+  }
+
+  if (/judge if this is good|is this good|what do you think/i.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'AI prompt is too vague for validator consensus',
+      suggestion:
+        'Force compact valid JSON, no markdown, allowed enum values, explicit criteria, confidence range, and short reasons.',
+    })
+  }
+
+  if (usesNondetPrompt && !/ESCALATED|NEEDS_REVIEW|UNDETERMINED|UNVERIFIABLE/i.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'AI/web judgement has no obvious uncertain or escalation path',
+      suggestion:
+        'Add ESCALATED, NEEDS_REVIEW, UNDETERMINED, or UNVERIFIABLE handling for weak evidence, malformed output, or validator uncertainty.',
+    })
+  }
+
+  if (usesNondetPrompt && /confidence/i.test(code) && !/confidence_band|LOW|MEDIUM|HIGH/.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'AI judgement uses confidence without a confidence band',
+      suggestion:
+        'Use LOW, MEDIUM, HIGH confidence_band for consensus-critical logic; exact numeric confidence can remain display-only.',
+    })
+  }
+
+  if (usesNondetPrompt && !/TASK\s*:|RULES\s*:|OUTPUT(?: FORMAT)?\s*:/i.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'AI prompt may not use bounded labelled sections',
+      suggestion:
+        'Build prompts with TASK, RULES, CLAIM, UNTRUSTED EVIDENCE, and OUTPUT FORMAT sections so user/evidence text cannot become instructions.',
+    })
+  }
+
+  if (usesJsonResponseFormat && !/\bnot\s+in\b|\.get\s*\(|isinstance\s*\(/.test(code)) {
+    warnings.push({
+      type: 'ConsensusWarning',
+      severity: 'warning',
+      message: 'JSON AI output may not be validated after parsing',
+      suggestion:
+        'Validate verdict, reason_code, status, confidence, and confidence_band before storing. Invalid values should escalate instead of approving.',
     })
   }
 
