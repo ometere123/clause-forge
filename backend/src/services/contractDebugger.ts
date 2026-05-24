@@ -7,6 +7,68 @@ import type { FrontendCallMapItem } from '../types'
 
 const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
+interface OperationalError extends Error {
+  statusCode?: number
+  isOperational?: boolean
+}
+
+const createOperationalError = (message: string, statusCode = 502): OperationalError => {
+  const error: OperationalError = new Error(message)
+  error.statusCode = statusCode
+  error.isOperational = true
+  return error
+}
+
+const toGroqDebugError = (err: unknown): OperationalError => {
+  const candidate = err as {
+    status?: number
+    statusCode?: number
+    code?: string
+    error?: { message?: string; code?: string; type?: string }
+    message?: string
+  }
+
+  const status = candidate?.status ?? candidate?.statusCode ?? 502
+  const code = candidate?.error?.code ?? candidate?.code ?? ''
+  const upstreamMessage = candidate?.error?.message ?? candidate?.message ?? ''
+  const text = `${code} ${upstreamMessage}`.toLowerCase()
+
+  if (status === 401 || status === 403 || /invalid.*api.*key|unauthorized|forbidden/.test(text)) {
+    return createOperationalError(
+      'Groq rejected the API key. Check your Groq key, remove extra spaces, or try the system free tier.',
+      401
+    )
+  }
+
+  if (status === 429 || /rate.*limit|quota|too many/.test(text)) {
+    return createOperationalError(
+      'Groq rate limit or quota was reached. Wait a bit or use a different Groq API key.',
+      429
+    )
+  }
+
+  if (/context|token|too large|maximum/.test(text)) {
+    return createOperationalError(
+      'The contract, traceback, or previous fix is too large for this debug request. Remove unrelated code/logs and try again with the exact failing traceback.',
+      413
+    )
+  }
+
+  if (/json_validate_failed|failed to generate json/.test(text)) {
+    return createOperationalError(
+      'The AI provider failed while formatting the debug response. Try again once; if it repeats, shorten the traceback and keep only the exact GenVM error.',
+      502
+    )
+  }
+
+  return createOperationalError(
+    upstreamMessage
+      ? `Groq could not complete the debug request: ${upstreamMessage}`
+      : 'Groq could not complete the debug request. Check Railway logs for the upstream error.',
+    status >= 400 && status < 600 ? status : 502
+  )
+}
+
 const DEBUG_SECTIONS = [
   'DIAGNOSIS',
   'ISSUE_CATEGORY',
@@ -98,14 +160,15 @@ export const debugContract = async (
 ): Promise<DebugContractResult> => {
   const groq = buildGroq(apiKey)
 
-  const completion = await groq.chat.completions.create({
-    model: config.groq.model,
-    max_tokens: config.groq.maxTokens,
-    messages: [
-      { role: 'system', content: buildDebugSystemPrompt() },
-      {
-        role: 'user',
-        content: `Intent:
+  const completion = await groq.chat.completions
+    .create({
+      model: config.groq.model,
+      max_tokens: config.groq.maxTokens,
+      messages: [
+        { role: 'system', content: buildDebugSystemPrompt() },
+        {
+          role: 'user',
+          content: `Intent:
 ${request.intent || 'Not provided'}
 
 Current code:
@@ -124,13 +187,31 @@ ${request.previousFix || ''}
 \`\`\`
 
 Return a complete fixed contract and explain the fix.`,
-      },
-    ],
-  })
+        },
+      ],
+    })
+    .catch((err) => {
+      throw toGroqDebugError(err)
+    })
 
   const content = completion.choices[0]?.message?.content ?? ''
+  if (!content.trim()) {
+    throw createOperationalError(
+      'The AI provider returned an empty debug response. Try again with the exact traceback and a shorter contract.',
+      502
+    )
+  }
+
   const parsed = parseDebugResponse(content)
   const fixedCode = normalizeContractCode(parsed.fixedCode)
+
+  if (!/class\s+\w+\s*\(\s*gl\.Contract\s*\)\s*:/.test(fixedCode)) {
+    throw createOperationalError(
+      'The AI debug response did not contain a complete GenLayer contract. Try again with the exact error and the full contract code.',
+      502
+    )
+  }
+
   const structure = extractContractStructure(fixedCode)
   const frontendCallMap = buildFrontendCallMap(structure)
 
