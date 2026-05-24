@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk'
 import { config } from '../config'
 import { buildFrontendCallMap, extractContractStructure } from './contractAnalysis'
-import { buildDebugSystemPrompt } from './genlayerKnowledge'
+import { buildCompactDebugSystemPrompt } from './genlayerKnowledge'
 import { normalizeContractCode } from './contractCode'
 import type { FrontendCallMapItem } from '../types'
 
@@ -41,8 +41,9 @@ const toGroqDebugError = (err: unknown): OperationalError => {
   }
 
   if (status === 429 || /rate.*limit|quota|too many/.test(text)) {
+    const detail = upstreamMessage ? ` Groq said: ${upstreamMessage}` : ''
     return createOperationalError(
-      'Groq rate limit or quota was reached. Wait a bit or use a different Groq API key.',
+      `Groq rate limit or quota was reached. This can happen when one debug request is too large for the key's token-per-minute limit.${detail}`,
       429
     )
   }
@@ -77,6 +78,33 @@ const DEBUG_SECTIONS = [
   'CHANGES',
   'WARNINGS',
 ] as const
+
+const MAX_DEBUG_CODE_CHARS = 12000
+const MAX_DEBUG_ERROR_CHARS = 5000
+const MAX_DEBUG_INTENT_CHARS = 1500
+const MAX_PREVIOUS_FIX_CHARS = 8000
+
+const truncateMiddle = (value: string, maxChars: number) => {
+  const normalized = value.trim()
+  if (normalized.length <= maxChars) return normalized
+
+  const headLength = Math.floor(maxChars * 0.6)
+  const tailLength = maxChars - headLength
+  return `${normalized.slice(0, headLength)}
+
+# ... Clause Forge trimmed the middle of this input to fit Groq rate limits ...
+
+${normalized.slice(-tailLength)}`
+}
+
+const compactDebugRequest = (request: DebugContractRequest) => ({
+  code: truncateMiddle(request.code, MAX_DEBUG_CODE_CHARS),
+  errorMessage: truncateMiddle(request.errorMessage, MAX_DEBUG_ERROR_CHARS),
+  intent: request.intent ? truncateMiddle(request.intent, MAX_DEBUG_INTENT_CHARS) : '',
+  previousFix: request.previousFix
+    ? truncateMiddle(request.previousFix, MAX_PREVIOUS_FIX_CHARS)
+    : '',
+})
 
 export interface DebugContractRequest {
   code: string
@@ -159,31 +187,32 @@ export const debugContract = async (
   apiKey?: string
 ): Promise<DebugContractResult> => {
   const groq = buildGroq(apiKey)
+  const compactRequest = compactDebugRequest(request)
 
   const completion = await groq.chat.completions
     .create({
       model: config.groq.model,
       max_tokens: config.groq.maxTokens,
       messages: [
-        { role: 'system', content: buildDebugSystemPrompt() },
+        { role: 'system', content: buildCompactDebugSystemPrompt() },
         {
           role: 'user',
           content: `Intent:
-${request.intent || 'Not provided'}
+${compactRequest.intent || 'Not provided'}
 
 Current code:
 \`\`\`python
-${request.code}
+${compactRequest.code}
 \`\`\`
 
 Error / traceback / GenVM output:
 \`\`\`txt
-${request.errorMessage}
+${compactRequest.errorMessage}
 \`\`\`
 
 Previous fix, if any:
 \`\`\`python
-${request.previousFix || ''}
+${compactRequest.previousFix || ''}
 \`\`\`
 
 Return a complete fixed contract and explain the fix.`,
