@@ -212,7 +212,39 @@ Debugging rules:
 - If the contract has no plain-English syntax error but uses optional storage, nested dataclasses as public inputs, list returns, raw __dict__ serialization, or strict equality for subjective AI, classify it as GenLayer schema/runtime/frontend compatibility rather than generic Python syntax.
 `
 
-const APP_TEMPLATES: Record<string, string> = {
+const GAME_STATE_RULES = `
+Game / multi-entity state rules (board games, trading games, match-based apps):
+- Do NOT store custom dataclasses inside TreeMap unless every field is a primitive storage type. Nested object graphs (Match → Player → Property) crash GenVM at deploy.
+- @allow_storage is a top-level import, used as @allow_storage above @dataclass. There is no gl.allow_storage.
+- Prefer JSON-backed flat state. Store complex match/player/property data as JSON strings, not nested storage objects:
+    matches: TreeMap[str, str]            # invite_code -> json.dumps(match_state)
+    player_matches: TreeMap[Address, str] # last/current match per player
+    stats: TreeMap[Address, str]          # per-player stats as JSON
+    match_count: u256                     # persistent counter for IDs
+- Never write dict or list as a TreeMap/DynArray type param. Use TreeMap[str, str] / DynArray[str] with JSON strings inside.
+- Never initialise storage with TreeMap() or DynArray() in the class body. Only type-annotate: matches: TreeMap[str, str].
+- Do NOT use len(TreeMap) to derive IDs. Use a persistent u256 counter, or use the invite_code as the key directly.
+- Address keys: keep them as Address objects (TreeMap[Address, str]). Convert input str -> Address(s) before lookup.
+- Write functions for game state must follow load -> mutate -> resave:
+    raw = self.matches.get(invite_code, "")
+    if raw == "": raise gl.vm.UserError("Match not found")
+    data = json.loads(raw)
+    # mutate data
+    self.matches[invite_code] = json.dumps(data)
+- View functions return JSON strings (get_match, get_stats, get_property), not raw dicts/dataclasses.
+- Empty Address sentinel is "" inside JSON, never None. Avoid Optional/None across storage and JSON.
+- Strict turn-phase control. Encode "phase" in match JSON: ROLL_REQUIRED | BUY_OR_AUCTION | ACTION_OR_END | PENALTY_DECISION. Reject actions that do not match the current phase.
+- Property purchase must be tied to current player's landing position, not arbitrary property_id. Rent resolves automatically inside roll_and_move, not via a manual pay_rent call.
+- Bankruptcy is immediate on failed payment: mark bankrupt, release properties, set active=false, then re-check winner. No silent negative balances.
+- Every write must guard: match exists, match active, caller is a player, caller is current player, player not bankrupt, action legal for current phase, match not finished.
+- Core game mechanics (dice, rent, ownership, bankruptcy, winner, card effects, balance) MUST be deterministic. Derive randomness from (match_id + turn_number + player_address + state hash). Never use random/time/LLM for these.
+- AI is allowed ONLY for commentary, hints, style analysis, match summary, coaching. AI must never decide dice, rent, winner, bankruptcy, card effects, ownership, or balance changes.
+- No placeholder comments like "# roll dice logic here" — every core function must be fully implemented.
+- For property-trading game genre: keep the theme original. Do not use Monopoly names, card text, board layout, mascots, or branding.
+
+Single rule to remember: for multi-entity game state, generate a JSON-backed flat state machine, never a nested Python/dataclass object graph.
+`
+
   escrow: `
 Escrow template rules:
 - Use one reusable contract with create_agreement, fund_agreement, submit_completion, raise_dispute, resolve_dispute, release/refund as needed.
@@ -281,6 +313,9 @@ const detectTemplates = (text: string) => {
   }
   if (/(ai|llm|judge|adjudicat|classif|reason|review|score|evaluate)/.test(lower)) {
     templates.push(CONSENSUS_RULES, LLM_WEB_RULES)
+  }
+  if (/(game|board|dice|turn|player|match|property|rent|bankrupt|tile|monopoly|trading game|invite code|round)/.test(lower)) {
+    templates.push(GAME_STATE_RULES)
   }
 
   return Array.from(new Set(templates))
