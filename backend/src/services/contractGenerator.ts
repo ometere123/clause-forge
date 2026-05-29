@@ -521,7 +521,7 @@ export const generateContract = async (
     model: config.groq.model,
     max_tokens: config.groq.maxTokens,
     messages: [
-      { role: 'system', content: buildGenerationSystemPrompt(description, SYSTEM_PROMPT) },
+      { role: 'system', content: buildGenerationSystemPrompt(description, '') },
       { role: 'user', content: buildGenerationUserPrompt(description) },
     ],
   })
