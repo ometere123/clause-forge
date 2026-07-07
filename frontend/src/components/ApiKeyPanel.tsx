@@ -22,7 +22,7 @@ export default function ApiKeyPanel() {
     <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold">AI Access</p>
+          <p className="text-sm font-semibold">Generation Access</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Free tier includes 3 system-backed Groq calls per day. Add your own key for unlimited generation and debugging.
             {' '}
@@ -37,7 +37,7 @@ export default function ApiKeyPanel() {
             .
           </p>
         </div>
-        {saved && <span className="text-xs text-green-600 font-medium">Saved</span>}
+        {saved && <span className="text-xs text-green-600 dark:text-green-400 font-medium">Saved</span>}
       </div>
       <div className="grid grid-cols-2 sm:flex gap-2">
         <input

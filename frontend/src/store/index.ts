@@ -39,7 +39,7 @@ interface ContractStore {
   setDeploymentResult: (result: DeploymentResult | null) => void
   setIsDeploying: (loading: boolean) => void
 
-  // ─── Wallet (external/injected only — Clause Forge never holds keys) ──
+  // ─── Wallet (external/injected only - Clause Forge never holds keys) ──
   externalWallet: WalletAccount | null
   setExternalWallet: (wallet: WalletAccount | null) => void
 

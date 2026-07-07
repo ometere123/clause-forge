@@ -63,7 +63,7 @@ contracts.post('/validate', async (c) => {
 
 // ─── Record deployment ────────────────────────────────────────────────────────
 // Deployments are signed entirely in the user's browser wallet. The backend
-// never receives private keys — this endpoint only indexes completed deploys.
+// never receives private keys - this endpoint only indexes completed deploys.
 
 const DeploymentRecordSchema = z.object({
   generationId: z.string(),

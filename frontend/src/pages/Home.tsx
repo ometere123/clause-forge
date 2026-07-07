@@ -46,7 +46,7 @@ export default function Home() {
           {
             step: '02',
             title: 'Generate',
-            desc: 'AI generates a production-ready Python GenLayer contract.',
+            desc: 'Clause Forge writes a production-ready Python GenLayer contract.',
           },
           {
             step: '03',

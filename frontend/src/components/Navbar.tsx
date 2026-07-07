@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronDown, Menu, Wallet, X } from 'lucide-react'
+import { ChevronDown, Menu, Moon, Sun, Wallet, X } from 'lucide-react'
 import { useWallet } from '@/hooks/useWallet'
+import { useTheme } from '@/hooks/useTheme'
 import { cn } from '@/lib/utils'
 import { useState, useRef, useEffect } from 'react'
 import CopyButton from '@/components/CopyButton'
@@ -26,6 +27,7 @@ export default function Navbar() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [walletError, setWalletError] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
+  const { isDark, toggleTheme } = useTheme()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -107,7 +109,7 @@ export default function Navbar() {
                 <div className="px-3 py-2 border-b border-border">
                   <p className="text-xs font-semibold">Connected Wallet</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Your wallet signs every deploy and write — Clause Forge never sees your keys.
+                    Your wallet signs every deploy and write - Clause Forge never sees your keys.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-2">
@@ -135,6 +137,16 @@ export default function Navbar() {
               </p>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent transition"
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={isDark ? 'Light mode' : 'Dark mode'}
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
 
           <button
             type="button"

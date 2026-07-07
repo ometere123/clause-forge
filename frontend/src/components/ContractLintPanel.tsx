@@ -43,7 +43,7 @@ function IssueList({ title, issues }: { title: string; issues: ValidationError[]
                 className={cn(
                   'px-2 py-0.5 rounded-full text-[10px] font-medium',
                   issue.severity === 'critical'
-                    ? 'bg-red-50 text-red-700'
+                    ? 'bg-red-50 dark:bg-red-950/30 text-red-700'
                     : issue.severity === 'warning'
                     ? 'bg-yellow-50 text-yellow-700'
                     : 'bg-muted text-muted-foreground'
@@ -125,9 +125,9 @@ export default function ContractLintPanel({
         <div
           className={cn(
             'rounded-md px-2 py-2',
-            health.tone === 'good' && 'bg-green-50 text-green-700',
+            health.tone === 'good' && 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300',
             health.tone === 'warn' && 'bg-yellow-50 text-yellow-700',
-            health.tone === 'bad' && 'bg-red-50 text-red-700',
+            health.tone === 'bad' && 'bg-red-50 dark:bg-red-950/30 text-red-700',
             health.tone === 'muted' && 'bg-muted/50 text-muted-foreground'
           )}
         >

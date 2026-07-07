@@ -217,7 +217,7 @@ export interface DebugContractResult {
 }
 
 // Sent AFTER a successful in-browser deploy so Clause Forge can index it.
-// Never contains keys — signing happens entirely in the user's wallet.
+// Never contains keys - signing happens entirely in the user's wallet.
 export interface DeploymentRecord {
   generationId: string
   contractAddress: string

@@ -6,6 +6,7 @@ import ContractLintPanel from '@/components/ContractLintPanel'
 import FrontendCallMapPanel from '@/components/FrontendCallMapPanel'
 import ContractGenerationReportPanel from '@/components/ContractGenerationReportPanel'
 import PlainSummaryPanel from '@/components/PlainSummaryPanel'
+import { useTheme } from '@/hooks/useTheme'
 import { normalizeContractCode } from '@/utils/contractCode'
 
 interface CodePreviewProps {
@@ -17,6 +18,7 @@ type Tab = 'code' | 'structure'
 
 export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProps) {
   const { generatedContract, setGeneratedContract } = useContractStore()
+  const { isDark } = useTheme()
   const [tab, setTab] = useState<Tab>('code')
   const [isEditing, setIsEditing] = useState(false)
   const [editedCode, setEditedCode] = useState(
@@ -106,7 +108,7 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
               defaultLanguage="python"
               value={isEditing ? editedCode : generatedContract.generatedCode}
               onChange={(v) => setEditedCode(v ?? '')}
-              theme="vs-light"
+              theme={isDark ? 'vs-dark' : 'vs-light'}
               options={{
                 minimap: { enabled: false },
                 wordWrap: 'on',
@@ -154,8 +156,8 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
                       className={cn(
                         'text-xs px-2 py-0.5 rounded-full font-medium',
                         method.isWrite
-                          ? 'bg-red-50 text-red-600'
-                          : 'bg-green-50 text-green-600'
+                          ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                          : 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400'
                       )}
                     >
                       {method.isWrite ? 'write' : 'view'}
@@ -259,7 +261,7 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
           <div className="space-y-2 text-sm">
             {[
               {
-                label: 'AI / LLM Calls',
+                label: 'LLM Calls',
                 active: generatedContract.estimation.capabilities.needsLlm,
               },
               {

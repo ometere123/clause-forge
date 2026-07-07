@@ -18,7 +18,7 @@ export const validateContract = (code: string): ValidationResult => {
   runSecurityChecks(code, errors, warnings)
 
   // 4. Consensus check
-  runConsensusChecks(code, warnings)
+  runConsensusChecks(code, errors, warnings)
 
   // 5. Cost check
   runCostChecks(code, warnings)
@@ -299,11 +299,13 @@ const runPublicMethodChecks = (
       }
 
       if (/\b(u8|u16|u24|u32|u64|u128|u160|u256|i8|i16|i32|i64|i128|i256)\b/.test(withoutDefault)) {
-        warnings.push({
-          type: 'FrontendWarning',
-          severity: 'warning',
-          message: `Parameter "${withoutDefault}" in ${name} uses a GenLayer integer type directly`,
-          suggestion: 'For public ABI inputs, prefer int and cast internally to u64/u256 after validation.',
+        // JSON has no u64; the SDK/Studio sends plain int and GenVM does not
+        // auto-cast, so a typed integer param crashes on every external call.
+        errors.push({
+          type: 'SchemaError',
+          severity: 'critical',
+          message: `Parameter "${withoutDefault}" in ${name} uses a GenLayer integer type in the public ABI`,
+          suggestion: 'Public ABI inputs must use int; cast internally, e.g. rid = u64(record_id).',
         })
       }
 
@@ -487,6 +489,35 @@ const runStorageChecks = (
     })
   }
 
+  if (/self\.\w+\s*=\s*(TreeMap|DynArray|Array)\s*\[[^\]]*\]\s*\(/.test(code)) {
+    errors.push({
+      type: 'StorageError',
+      severity: 'critical',
+      message: 'Storage collection types cannot be instantiated (e.g. self.x = TreeMap[K, V]()) - this crashes at deploy',
+      suggestion:
+        'Only declare collections in the class body (items: TreeMap[str, u64]); GenVM auto-initializes them. Delete the assignment in __init__.',
+    })
+  }
+
+  if (/\bjson\.(dumps|loads)\s*\(/.test(code) && !/^\s*import json\s*$/m.test(code)) {
+    errors.push({
+      type: 'ImportError',
+      severity: 'critical',
+      message: 'Contract uses json.dumps/json.loads but never imports json',
+      suggestion: 'Add "import json" after the genlayer import.',
+    })
+  }
+
+  if (/exec_prompt\s*\(\s*\{/.test(code)) {
+    errors.push({
+      type: 'ConsensusError',
+      severity: 'critical',
+      message: 'exec_prompt is called with a Python dict; the prompt must be a single string',
+      suggestion:
+        'Build one f-string with labelled TASK / RULES / CLAIM / UNTRUSTED EVIDENCE / OUTPUT FORMAT sections and pass that string to gl.nondet.exec_prompt.',
+    })
+  }
+
   if (/self\.\w+\s*=\s*None\b/.test(code) || /\w+\s*=\s*None\b/.test(code)) {
     warnings.push({
       type: 'StorageWarning',
@@ -577,7 +608,7 @@ const runSecurityChecks = (
     { pattern: 'import urllib', name: 'urllib' },
     { pattern: 'import httpx', name: 'httpx' },
     { pattern: 'import aiohttp', name: 'aiohttp' },
-    // Note: datetime.now()/time.time() are ALLOWED — GenVM pins the Python
+    // Note: datetime.now()/time.time() are ALLOWED - GenVM pins the Python
     // clock to the transaction datetime, so they are deterministic.
     { pattern: 'import random', name: 'random' },
     { pattern: 'random.random', name: 'random.random()' },
@@ -634,7 +665,11 @@ const runSecurityChecks = (
   }
 }
 
-const runConsensusChecks = (code: string, warnings: ValidationError[]) => {
+const runConsensusChecks = (
+  code: string,
+  errors: ValidationError[],
+  warnings: ValidationError[]
+) => {
   const usesNondetPrompt = code.includes('gl.nondet.exec_prompt')
   const usesAnyPrompt = usesNondetPrompt || code.includes('gl.exec_prompt')
   const usesJsonResponseFormat = /response_format\s*=\s*["']json["']/.test(code)
@@ -664,20 +699,23 @@ const runConsensusChecks = (code: string, warnings: ValidationError[]) => {
     })
   }
 
-  if (usesNondetPrompt && !hasEquivalence) {
-    warnings.push({
-      type: 'ConsensusWarning',
-      severity: 'warning',
-      message: 'Nondeterministic LLM call has no obvious equivalence or validation strategy',
-      suggestion: 'Use gl.eq_principle.* or gl.vm.run_nondet_unsafe with a validator function.',
+  if (/gl\.nondet\./.test(code) && !hasEquivalence) {
+    // gl.nondet.* calls only run inside a nondet block; a bare call in a
+    // write method fails at execution and cannot reach consensus.
+    errors.push({
+      type: 'ConsensusError',
+      severity: 'critical',
+      message: 'gl.nondet.* is called with no equivalence guard (strict_eq / prompt_comparative / run_nondet_unsafe)',
+      suggestion:
+        'Move all gl.nondet.* calls into a leader function and run it through gl.eq_principle.* or gl.vm.run_nondet_unsafe with a validator function.',
     })
   }
 
   if (/self\.[A-Za-z_]\w*\s*=\s*gl\.nondet/i.test(code)) {
-    warnings.push({
-      type: 'ConsensusWarning',
-      severity: 'warning',
-      message: 'Raw nondeterministic output appears to be written directly to storage',
+    errors.push({
+      type: 'ConsensusError',
+      severity: 'critical',
+      message: 'Raw nondeterministic output is written directly to storage',
       suggestion:
         'Wrap AI/web output in strict_eq, prompt_comparative, prompt_non_comparative, or run_nondet_unsafe before storing it.',
     })

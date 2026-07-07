@@ -3,7 +3,7 @@ import { useContractStore } from '@/store'
 import { switchInjectedWalletNetwork } from '@/services/genLayerClient'
 import type { Network, WalletAccount } from '@/types'
 
-// External-wallet-only. Clause Forge never holds keys — the user's own wallet
+// External-wallet-only. Clause Forge never holds keys - the user's own wallet
 // (MetaMask, Rabby, etc.) is the single signing identity.
 
 export const useWallet = () => {

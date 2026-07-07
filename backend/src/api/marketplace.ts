@@ -43,7 +43,7 @@ marketplace.get('/', async (c) => {
   const { data, error } = await query
 
   if (error) {
-    // Table might not exist yet — return empty list gracefully
+    // Table might not exist yet - return empty list gracefully
     return c.json({ data: [] })
   }
 

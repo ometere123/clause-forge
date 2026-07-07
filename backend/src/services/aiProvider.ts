@@ -105,11 +105,10 @@ export const completeAi = async (
   messages: AiMessage[],
   options: { maxTokens?: number; apiKey?: string } = {}
 ): Promise<AiCompletion> => {
-  const maxTokens = options.maxTokens ?? config.ai.maxTokens
-
   if (shouldUseOpenAi(options.apiKey)) {
-    return completeWithOpenAi(messages, maxTokens)
+    return completeWithOpenAi(messages, options.maxTokens ?? config.ai.maxTokens)
   }
 
-  return completeWithGroq(messages, maxTokens, options.apiKey)
+  // Groq keys hit tokens-per-minute limits quickly; keep its cap lower.
+  return completeWithGroq(messages, options.maxTokens ?? config.ai.groqMaxTokens, options.apiKey)
 }

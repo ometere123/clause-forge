@@ -90,7 +90,7 @@ export const aiUsageLimiter = async (c: Context, next: Next) => {
   const clientKey = await sha256Hex(clientIp(c))
   const quota = await useDatabaseLimit(clientKey, todayKey())
 
-  // If Supabase is unreachable, fail open — better to serve than to block.
+  // If Supabase is unreachable, fail open - better to serve than to block.
   if (quota && !quota.allowed) {
     return c.json(
       {

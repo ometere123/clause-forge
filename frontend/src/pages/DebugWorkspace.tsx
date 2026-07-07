@@ -203,7 +203,7 @@ export default function DebugWorkspace() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Fixed
               </p>
-              <pre className="h-[360px] sm:h-[520px] overflow-auto border border-border rounded-lg p-4 text-xs font-mono whitespace-pre-wrap bg-green-50">
+              <pre className="h-[360px] sm:h-[520px] overflow-auto border border-border rounded-lg p-4 text-xs font-mono whitespace-pre-wrap bg-green-50 dark:bg-green-950/30">
                 {result.fixedCode}
               </pre>
             </div>

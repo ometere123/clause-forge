@@ -70,7 +70,7 @@ export default function ContractDetail() {
       let result: unknown
 
       if (selectedMethod.isWrite) {
-        // Writes are signed by the user's own wallet — never by Clause Forge
+        // Writes are signed by the user's own wallet - never by Clause Forge
         const client = await createInjectedClient(network) as any
         const hash = await client.writeContract({
           account: client.account,
@@ -159,7 +159,7 @@ export default function ContractDetail() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-xs text-green-700 font-medium">{networkConfig.label}</span>
+          <span className="text-xs text-green-700 dark:text-green-300 font-medium">{networkConfig.label}</span>
         </div>
       </div>
 
@@ -177,7 +177,7 @@ export default function ContractDetail() {
           <div className="space-y-4">
             {viewMethods.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-green-600 mb-2">View</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400 mb-2">View</p>
                 <div className="space-y-1">
                   {viewMethods.map((m) => (
                     <button
@@ -186,7 +186,7 @@ export default function ContractDetail() {
                       className={cn(
                         'w-full text-left px-3 py-2 rounded border text-sm font-mono transition',
                         selectedMethod?.name === m.name
-                          ? 'border-green-400 bg-green-50 text-green-700'
+                          ? 'border-green-400 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300'
                           : 'border-border hover:border-green-300'
                       )}
                     >
@@ -199,7 +199,7 @@ export default function ContractDetail() {
 
             {writeMethods.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-600 mb-2">Write</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-2">Write</p>
                 <div className="space-y-1">
                   {writeMethods.map((m) => (
                     <button
@@ -208,7 +208,7 @@ export default function ContractDetail() {
                       className={cn(
                         'w-full text-left px-3 py-2 rounded border text-sm font-mono transition',
                         selectedMethod?.name === m.name
-                          ? 'border-red-400 bg-red-50 text-red-700'
+                          ? 'border-red-400 bg-red-50 dark:bg-red-950/30 text-red-700'
                           : 'border-border hover:border-red-300'
                       )}
                     >
@@ -301,7 +301,7 @@ export default function ContractDetail() {
             <div className="border border-border rounded-lg h-80 overflow-y-auto p-3 space-y-2 bg-muted/20">
               {logs.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  No calls yet — select a method and call it
+                  No calls yet - select a method and call it
                 </p>
               ) : (
                 logs.map((log, i) => (
@@ -317,7 +317,7 @@ export default function ContractDetail() {
                     <pre
                       className={cn(
                         'mt-1 whitespace-pre-wrap break-all',
-                        log.isError ? 'text-destructive' : 'text-green-700'
+                        log.isError ? 'text-destructive' : 'text-green-700 dark:text-green-300'
                       )}
                     >
                       {log.result}

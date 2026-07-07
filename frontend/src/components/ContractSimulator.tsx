@@ -107,7 +107,7 @@ export default function ContractSimulator({
       let result: unknown
 
       if (selectedMethod.isWrite) {
-        // Writes are signed by the user's own wallet — never by Clause Forge
+        // Writes are signed by the user's own wallet - never by Clause Forge
         if (!walletAddress) {
           throw new Error('Connect your wallet (top right) to send write transactions.')
         }
@@ -158,20 +158,20 @@ export default function ContractSimulator({
   return (
     <div className="space-y-4">
       {/* Contract address banner */}
-      <div className="bg-green-50 border border-green-200 rounded-lg px-3 sm:px-4 py-3 flex items-start sm:items-center gap-3 text-sm">
+      <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg px-3 sm:px-4 py-3 flex items-start sm:items-center gap-3 text-sm">
         <span className="w-2 h-2 bg-green-500 rounded-full shrink-0" />
         <div className="min-w-0">
-          <span className="text-green-700 font-medium block sm:inline">Deployed on {networkConfig.label}</span>
-          <span className="hidden sm:inline text-green-700 font-medium"> · </span>
+          <span className="text-green-700 dark:text-green-300 font-medium block sm:inline">Deployed on {networkConfig.label}</span>
+          <span className="hidden sm:inline text-green-700 dark:text-green-300 font-medium"> · </span>
           <a
             href={explorerUrl}
             target="_blank"
             rel="noreferrer"
-            className="font-mono text-green-700 text-xs break-all underline underline-offset-2 hover:text-green-800"
+            className="font-mono text-green-700 dark:text-green-300 text-xs break-all underline underline-offset-2 hover:text-green-800"
           >
             {contractAddress}
           </a>
-          <CopyButton text={contractAddress} className="text-green-600 hover:bg-green-100" />
+          <CopyButton text={contractAddress} className="text-green-600 dark:text-green-400 hover:bg-green-100" />
         </div>
       </div>
 
@@ -180,7 +180,7 @@ export default function ContractSimulator({
         <div className="space-y-4">
           {viewMethods.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-green-600 mb-2">View</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400 mb-2">View</p>
               <div className="space-y-1">
                 {viewMethods.map((m) => (
                   <button
@@ -189,7 +189,7 @@ export default function ContractSimulator({
                     className={cn(
                       'w-full text-left px-3 py-2 rounded border text-sm font-mono transition',
                       selectedMethod?.name === m.name
-                        ? 'border-green-400 bg-green-50 text-green-700'
+                        ? 'border-green-400 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300'
                         : 'border-border hover:border-green-300'
                     )}
                   >
@@ -202,7 +202,7 @@ export default function ContractSimulator({
 
           {writeMethods.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-600 mb-2">Write</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-2">Write</p>
               <div className="space-y-1">
                 {writeMethods.map((m) => (
                   <button
@@ -211,7 +211,7 @@ export default function ContractSimulator({
                     className={cn(
                       'w-full text-left px-3 py-2 rounded border text-sm font-mono transition',
                       selectedMethod?.name === m.name
-                        ? 'border-red-400 bg-red-50 text-red-700'
+                        ? 'border-red-400 bg-red-50 dark:bg-red-950/30 text-red-700'
                         : 'border-border hover:border-red-300'
                     )}
                   >
@@ -277,7 +277,7 @@ export default function ContractSimulator({
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Call History</p>
           <div className="border border-border rounded-lg h-72 overflow-y-auto p-3 space-y-2 bg-muted/20">
             {logs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No calls yet — select a method and call it</p>
+              <p className="text-xs text-muted-foreground">No calls yet - select a method and call it</p>
             ) : (
               logs.map((log, i) => (
                 <div
@@ -291,7 +291,7 @@ export default function ContractSimulator({
                   <p className="text-muted-foreground">{log.timestamp}</p>
                   <pre className={cn(
                     'mt-1 whitespace-pre-wrap break-all',
-                    log.isError ? 'text-destructive' : 'text-green-700'
+                    log.isError ? 'text-destructive' : 'text-green-700 dark:text-green-300'
                   )}>
                     {log.result}
                   </pre>
@@ -322,7 +322,7 @@ export default function ContractSimulator({
         </div>
 
         {submitSuccess ? (
-          <div className="mt-4 bg-green-50 border border-green-200 rounded px-4 py-3 text-sm text-green-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="mt-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded px-4 py-3 text-sm text-green-700 dark:text-green-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span>✓ Submitted successfully!</span>
             <Link to="/marketplace" className="text-primary text-xs hover:underline">
               View in Marketplace →

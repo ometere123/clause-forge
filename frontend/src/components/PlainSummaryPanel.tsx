@@ -45,15 +45,15 @@ export default function PlainSummaryPanel({ summary, validation, autoFix }: Plai
           className={cn(
             'flex items-center gap-2 px-4 py-2 text-sm font-medium',
             validation.isValid
-              ? 'bg-green-50 text-green-700'
-              : 'bg-amber-50 text-amber-700'
+              ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300'
+              : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300'
           )}
         >
           {validation.isValid ? (
             <>
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>
-                Checks passed — ready to deploy
+                Checks passed - ready to deploy
                 {validation.warnings.length > 0 && ` (${validation.warnings.length} advisory note${validation.warnings.length > 1 ? 's' : ''})`}
               </span>
             </>
@@ -61,7 +61,7 @@ export default function PlainSummaryPanel({ summary, validation, autoFix }: Plai
             <>
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>
-                {criticalCount} issue{criticalCount !== 1 ? 's' : ''} found — use the Debug workspace or regenerate before deploying
+                {criticalCount} issue{criticalCount !== 1 ? 's' : ''} found - use the Debug workspace or regenerate before deploying
               </span>
             </>
           )}
@@ -69,7 +69,7 @@ export default function PlainSummaryPanel({ summary, validation, autoFix }: Plai
       )}
 
       {autoFix?.succeeded && (
-        <div className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 border-t border-blue-100">
+        <div className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-t border-blue-100 dark:border-blue-900">
           <Wrench className="w-4 h-4 shrink-0" />
           <span>
             Clause Forge automatically repaired {autoFix.issuesFixed.length} issue
@@ -86,7 +86,7 @@ export default function PlainSummaryPanel({ summary, validation, autoFix }: Plai
         >
           <span className="flex items-center gap-2 font-semibold text-sm">
             <BookOpen className="w-4 h-4 text-primary" />
-            What your contract does — in plain English
+            What your contract does - in plain English
           </span>
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-muted-foreground" />

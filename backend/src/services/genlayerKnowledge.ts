@@ -177,18 +177,18 @@ Time and timestamp rules (verified against current GenLayer docs):
 - For unix-seconds arithmetic (expiries, deltas): now = int(datetime.now(timezone.utc).timestamp()) with from datetime import datetime, timezone.
 - For ISO 8601 audit strings: datetime.now(timezone.utc).isoformat() or gl.message_raw['datetime'].
 - Store timestamps as u64 unix seconds or str ISO strings.
-- The clock is the TRANSACTION time, not wall-clock "now" — use it for relative arithmetic and timestamping, never for "is it past 5pm right now".
+- The clock is the TRANSACTION time, not wall-clock "now" - use it for relative arithmetic and timestamping, never for "is it past 5pm right now".
 - There is NO block number, block hash, gl.block.timestamp, or gl.message.timestamp.
 - Do not require the frontend to pass timestamps as parameters; read the transaction time in-contract instead.
 `
 
 const API_CANON_RULES = `
-Canonical GenLayer API names (verified against current docs — do not invent variants):
+Canonical GenLayer API names (verified against current docs - do not invent variants):
 - LLM: gl.nondet.exec_prompt(prompt), gl.nondet.exec_prompt(prompt, response_format="json"), gl.nondet.exec_prompt(prompt, images=[bytes]) (max 2 images). All must run inside a nondet block.
-- Web: gl.nondet.web.get(url) / gl.nondet.web.request(url, method="POST", body={...}). Responses expose response.status_code and response.body (bytes — decode with .decode("utf-8")).
+- Web: gl.nondet.web.get(url) / gl.nondet.web.request(url, method="POST", body={...}). Responses expose response.status_code and response.body (bytes - decode with .decode("utf-8")).
 - Rendering: gl.nondet.web.render(url, mode="html") for page content, gl.nondet.web.render(url, mode="screenshot") for image bytes.
 - Equivalence: gl.eq_principle.strict_eq(fn), gl.eq_principle.prompt_comparative(fn, criteria), gl.eq_principle.prompt_non_comparative(fn, task=..., criteria=...), gl.vm.run_nondet_unsafe(leader_fn, validator_fn) with gl.vm.Return leader results.
-- Cross-contract: gl.get_contract_at(address) — NOT gl.contract.get_at. Child deploys: gl.deploy_contract(code=...).
+- Cross-contract: gl.get_contract_at(address) - NOT gl.contract.get_at. Child deploys: gl.deploy_contract(code=...).
 - Errors: raise gl.vm.UserError("message"). Catch with except gl.vm.UserError.
 - Storage ints: u8..u256 / i8..i256; bigint is a valid alias for unbounded int in storage when truly needed.
 - gl.message fields: sender_address, origin_address, contract_address, value (payable only), chain_id. Extra metadata (datetime ISO string, is_init) lives in gl.message_raw.
@@ -265,7 +265,7 @@ Game / multi-entity state rules (board games, trading games, match-based apps):
 - Every write must guard: match exists, match active, caller is a player, caller is current player, player not bankrupt, action legal for current phase, match not finished.
 - Core game mechanics (dice, rent, ownership, bankruptcy, winner, card effects, balance) MUST be deterministic. Derive randomness from (match_id + turn_number + player_address + state hash). Never use random/time/LLM for these.
 - AI is allowed ONLY for commentary, hints, style analysis, match summary, coaching. AI must never decide dice, rent, winner, bankruptcy, card effects, ownership, or balance changes.
-- No placeholder comments like "# roll dice logic here" — every core function must be fully implemented.
+- No placeholder comments like "# roll dice logic here" - every core function must be fully implemented.
 - For property-trading game genre: keep the theme original. Do not use Monopoly names, card text, board layout, mascots, or branding.
 
 Single rule to remember: for multi-entity game state, generate a JSON-backed flat state machine, never a nested Python/dataclass object graph.
@@ -463,7 +463,7 @@ Hard rules:
 - Do not invent unavailable GenLayer APIs.
 - Use gl.vm.UserError for expected user-facing errors.
 - Never use random.random(), uuid.uuid4(), requests/http libraries, Firebase/Admin SDK, or frontend-only verification inside the contract.
-- datetime.now(timezone.utc) and time.time() ARE allowed — GenVM pins the clock to the transaction datetime, making them deterministic.
+- datetime.now(timezone.utc) and time.time() ARE allowed - GenVM pins the clock to the transaction datetime, making them deterministic.
 - Cross-contract calls use gl.get_contract_at(address); web responses expose response.status_code and response.body.
 
 AI/web rules:

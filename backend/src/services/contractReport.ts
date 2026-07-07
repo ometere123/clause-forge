@@ -284,7 +284,7 @@ const scanBadPatterns = (code: string, kind: ContractKind, callMap: FrontendCall
       pattern: 'random/uuid',
       status: /\b(random\.random|uuid\.uuid4)\s*\(/.test(code) ? 'fail' : 'pass',
       detail:
-        'Avoid nondeterministic randomness helpers. datetime.now()/time.time() are fine — GenVM pins them to the transaction timestamp.',
+        'Avoid nondeterministic randomness helpers. datetime.now()/time.time() are fine - GenVM pins them to the transaction timestamp.',
     },
     {
       pattern: 'external Python HTTP libraries',

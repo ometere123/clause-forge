@@ -6,9 +6,9 @@ interface ContractGenerationReportPanelProps {
 }
 
 const statusClass: Record<ContractGenerationReport['badPatternReport'][number]['status'], string> = {
-  pass: 'bg-green-50 text-green-700',
-  warning: 'bg-amber-50 text-amber-700',
-  fail: 'bg-red-50 text-red-700',
+  pass: 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300',
+  warning: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300',
+  fail: 'bg-red-50 dark:bg-red-950/30 text-red-700',
 }
 
 export default function ContractGenerationReportPanel({

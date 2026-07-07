@@ -113,29 +113,29 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
 
     return (
       <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6">
-        <div className="border border-green-200 bg-green-50 rounded-xl p-4 sm:p-6 space-y-4">
+        <div className="border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/30 rounded-xl p-4 sm:p-6 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xl font-bold">✓</div>
+            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-700 dark:text-green-300 text-xl font-bold">✓</div>
             <div>
-              <p className="font-semibold text-green-800">Contract Deployed</p>
-              <p className="text-sm text-green-600">Finalized on {networkConfig.label}</p>
+              <p className="font-semibold text-green-800 dark:text-green-200">Contract Deployed</p>
+              <p className="text-sm text-green-600 dark:text-green-400">Finalized on {networkConfig.label}</p>
             </div>
           </div>
-          <div className="space-y-3 pt-2 border-t border-green-200">
+          <div className="space-y-3 pt-2 border-t border-green-200 dark:border-green-900">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Contract Address</p>
               <a
                 href={explorerUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="block font-mono text-sm bg-white border border-green-200 px-3 py-2 rounded break-all text-green-700 underline underline-offset-2 hover:text-green-800"
+                className="block font-mono text-sm bg-white dark:bg-background border border-green-200 dark:border-green-900 px-3 py-2 rounded break-all text-green-700 dark:text-green-300 underline underline-offset-2 hover:text-green-800"
               >
                 {deploymentResult.contractAddress}
               </a>
             </div>
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Transaction Hash</p>
-              <p className="font-mono text-sm bg-white border border-green-200 px-3 py-2 rounded break-all">{deploymentResult.transactionHash}</p>
+              <p className="font-mono text-sm bg-white dark:bg-background border border-green-200 dark:border-green-900 px-3 py-2 rounded break-all">{deploymentResult.transactionHash}</p>
             </div>
             <div className="grid grid-cols-1 sm:flex gap-3 sm:gap-6 text-sm">
               <div><p className="text-xs text-muted-foreground">Network</p><p className="font-medium capitalize">{deploymentResult.network}</p></div>
@@ -165,10 +165,10 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
           {generatedContract.estimation.capabilities.needsLlm && (
-            <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Uses AI</span>
+            <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full">Uses LLM</span>
           )}
           {generatedContract.estimation.capabilities.needsWebFetch && (
-            <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Fetches Web Data</span>
+            <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full">Fetches Web Data</span>
           )}
         </div>
       </div>
@@ -224,7 +224,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
         </div>
       </div>
 
-      {/* Wallet — the only signing path */}
+      {/* Wallet - the only signing path */}
       <div className="border border-border rounded-xl p-4 sm:p-5 space-y-3">
         <p className="text-sm font-semibold flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
@@ -247,7 +247,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
           </button>
         )}
         <p className="text-xs text-muted-foreground">
-          Clause Forge never sees or stores your keys — deployment is signed in your own wallet
+          Clause Forge never sees or stores your keys - deployment is signed in your own wallet
           (MetaMask, Rabby, ...). {selectedNetworkConfig.isProductionLike
             ? `You need test GEN on ${selectedNetworkConfig.label} to pay for deployment.`
             : ''}

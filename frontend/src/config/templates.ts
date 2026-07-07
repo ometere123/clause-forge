@@ -33,14 +33,14 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
   {
     id: 'bounty-review',
     name: 'Bounty Review & Payout',
-    tagline: 'AI-judged submissions with escrowed rewards',
+    tagline: 'Judged submissions with escrowed rewards',
     kind: 'ai-judgement',
     prompt:
       'Create a bounty contract. The owner creates a bounty with a task description and acceptance criteria, funding it with GEN tokens at creation. Anyone can submit work as a URL plus a short summary, one submission per wallet. The owner triggers judging: AI scores each submission from 0 to 100 against the acceptance criteria with a short reason, marking submissions APPROVED, REJECTED, or NEEDS_REVIEW. The highest approved score wins and can claim the escrowed reward once. Store all submissions, scores, reasons, and the winner. Reject new submissions after judging and prevent double payout.',
   },
   {
     id: 'ai-arbitration',
-    name: 'AI Arbitration',
+    name: 'Arbitration',
     tagline: 'Two-party dispute resolution with evidence',
     kind: 'ai-judgement',
     prompt:
@@ -49,14 +49,14 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
   {
     id: 'content-moderation',
     name: 'Fair Moderation',
-    tagline: 'Transparent AI rule enforcement for communities',
+    tagline: 'Transparent rule enforcement for communities',
     kind: 'ai-judgement',
     prompt:
       'Create a content moderation contract. The owner sets the community rules as plain text at deployment. Anyone can submit a piece of content (text) for review. AI checks the content against the rules and marks it ALLOWED, REMOVED, or NEEDS_HUMAN_REVIEW, with a short reason referencing the specific rule involved. Store each verdict with the submitter address and timestamp so all moderation decisions are public and auditable. The owner can update the rules, and rule updates never change past verdicts.',
   },
   {
     id: 'ai-notary',
-    name: 'AI Notary',
+    name: 'Web Notary',
     tagline: 'Verifiable records of online events',
     kind: 'web-aware',
     prompt:
@@ -80,7 +80,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
   },
   {
     id: 'escrow',
-    name: 'Escrow with AI Disputes',
+    name: 'Escrow with Disputes',
     tagline: 'Funds released on completion, disputes judged fairly',
     kind: 'ai-judgement',
     prompt:
@@ -89,7 +89,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
   {
     id: 'game-master',
     name: 'Decentralized Game Master',
-    tagline: 'Text adventure where AI narrates outcomes',
+    tagline: 'Text adventure with narrated outcomes',
     kind: 'ai-judgement',
     prompt:
       'Create a text adventure game contract. The owner sets the world description at deployment. Players join with a character name. On their turn a player submits an action in plain text, and AI narrates the outcome in two sentences and updates the player state: health 0-100 and a one-line status. AI must be consistent with the world description and previous state, never granting impossible outcomes. Store each player state plus a short adventure log per player. A player at 0 health is out and their actions are rejected.',
@@ -97,15 +97,15 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
   {
     id: 'dao-treasury',
     name: 'Proposal Voting',
-    tagline: 'Simple on-chain voting, no AI needed',
+    tagline: 'Simple on-chain voting, pure code',
     kind: 'deterministic',
     prompt:
-      'Create a proposal voting contract. The owner creates proposals with a title and description. Anyone can vote YES or NO on an open proposal, one vote per wallet per proposal, tracked to prevent double voting. The owner can close a proposal, freezing the tally. Provide views for a proposal with its vote counts, the total number of proposals, and whether a given wallet has voted. This is deterministic — no AI or web access needed.',
+      'Create a proposal voting contract. The owner creates proposals with a title and description. Anyone can vote YES or NO on an open proposal, one vote per wallet per proposal, tracked to prevent double voting. The owner can close a proposal, freezing the tally. Provide views for a proposal with its vote counts, the total number of proposals, and whether a given wallet has voted. This is deterministic - no AI or web access needed.',
   },
   {
     id: 'retro-funding',
     name: 'Retroactive Funding',
-    tagline: 'Reward past contributions after AI evaluation',
+    tagline: 'Reward past contributions after review',
     kind: 'ai-judgement',
     prompt:
       'Create a retroactive public goods funding contract. The owner funds a reward round with GEN and sets the contribution criteria as text. Anyone can nominate a contribution with a description and a public evidence URL (repo, article, or deployment), one nomination per wallet per round. When the owner closes the round, AI scores each nomination 0-100 against the criteria using the evidence, with a short reason; nominations scoring under 50 or with unreachable evidence get 0. The round budget is split proportionally to scores and each nominee can claim their share once.',

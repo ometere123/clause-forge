@@ -45,12 +45,19 @@ export const config = {
       return required('OPENAI_API_KEY')
     },
     get model() {
-      return env('OPENAI_MODEL', 'gpt-4o-mini')
+      // Contract generation needs a strong model; mini-tier models produce
+      // GenVM code with structural bugs (wrong ABI param types, ungated
+      // nondet calls, storage-type instantiation).
+      return env('OPENAI_MODEL', 'gpt-4.1')
     },
   },
 
   ai: {
-    maxTokens: 3000,
+    // Real-world GenLayer contracts routinely exceed 3000 tokens; a low cap
+    // truncates methods mid-body. Groq TPM limits were the old reason for
+    // 3000, so keep a smaller cap on the Groq path only.
+    maxTokens: 8000,
+    groqMaxTokens: 3000,
   },
 
   genLayer: {

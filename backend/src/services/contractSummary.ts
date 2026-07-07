@@ -7,7 +7,7 @@ import type {
 
 // Builds a deterministic plain-English explanation of a generated contract so
 // non-developers can verify the contract matches their intent without reading
-// Python. No AI calls — everything is derived from the extracted structure.
+// Python. No AI calls - everything is derived from the extracted structure.
 
 const FRIENDLY_TYPE: Record<string, string> = {
   str: 'text',
@@ -61,7 +61,7 @@ const describeMethod = (method: ContractMethod, code: string): string => {
       .filter(Boolean)
       .join('; ')
     return `${who} can call "${action}"${describeInputs(method)}. This changes the contract's records${
-      extras ? ` — ${extras}` : ''
+      extras ? ` - ${extras}` : ''
     }.`
   }
   return `${who} can call "${action}"${describeInputs(method)} to read stored information. Reading never changes anything.`
@@ -80,7 +80,7 @@ const describeStorage = (stateVariables: Record<string, string>): string[] =>
 
 const KIND_HEADLINE: Record<ContractKind, string> = {
   deterministic:
-    'This contract follows fixed rules written in code. No AI decisions are involved — the same input always produces the same result.',
+    'This contract follows fixed rules written in code. No AI decisions are involved - the same input always produces the same result.',
   'web-aware':
     'This contract checks live public web data as evidence before it updates its records, and GenLayer validators must agree on what that evidence says.',
   'ai-judgement':
@@ -109,7 +109,7 @@ export const buildPlainSummary = (params: {
   }
   if (kind !== 'deterministic') {
     notes.push(
-      'AI/web results can occasionally be uncertain — the contract routes unclear cases to an escalated/needs-review state instead of guessing.'
+      'AI/web results can occasionally be uncertain - the contract routes unclear cases to an escalated/needs-review state instead of guessing.'
     )
   }
   notes.push('Changing data costs a transaction; reading data is free.')

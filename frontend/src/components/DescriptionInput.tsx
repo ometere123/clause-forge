@@ -7,9 +7,9 @@ import { createImportedContract } from '@/utils/contractImport'
 import { CONTRACT_TEMPLATES, type ContractTemplate, type TemplateKind } from '@/config/templates'
 
 const KIND_BADGE: Record<TemplateKind, { label: string; className: string }> = {
-  'ai-judgement': { label: 'AI', className: 'bg-purple-100 text-purple-700' },
-  'web-aware': { label: 'Web', className: 'bg-blue-100 text-blue-700' },
-  deterministic: { label: 'Code', className: 'bg-green-100 text-green-700' },
+  'ai-judgement': { label: 'Judgement', className: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' },
+  'web-aware': { label: 'Web', className: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' },
+  deterministic: { label: 'Code', className: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' },
 }
 
 const IMPORT_PLACEHOLDER = `# v0.2.16
@@ -109,7 +109,7 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
             </p>
             <div className="border border-border rounded-lg px-4 py-3 text-sm text-muted-foreground space-y-2">
               <p>Paste a complete GenLayer Intelligent Contract in Python.</p>
-              <p>This path skips AI generation and does not use Groq calls.</p>
+              <p>This path skips generation entirely and uses no API calls.</p>
             </div>
           </div>
 
@@ -153,7 +153,7 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 sm:gap-6">
-      {/* Templates — curated from the official GenLayer ideas catalogue */}
+      {/* Templates - curated from the official GenLayer ideas catalogue */}
       <div className="lg:col-span-1">
         <p className="text-sm font-semibold mb-1 text-muted-foreground uppercase tracking-wide">
           Templates
@@ -196,7 +196,7 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Example: Create a contract that verifies if a claim is factually accurate using AI. Store the result as YES or NO. Anyone can submit a claim, anyone can read the result."
+            placeholder="Example: Create a contract that verifies whether a claim is factually accurate. Store the result as YES or NO. Anyone can submit a claim, anyone can read the result."
             className="w-full h-52 sm:h-44 px-4 py-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
           />
           <div className="flex flex-wrap justify-between gap-1 text-xs text-muted-foreground mt-1">
@@ -210,7 +210,7 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
           <p className="font-medium">Tips for better results</p>
           <ul className="text-muted-foreground space-y-0.5 text-xs">
             <li>• Specify inputs and outputs clearly</li>
-            <li>• Mention if AI decision-making is needed</li>
+            <li>• Mention if the contract must judge, verify, or interpret something</li>
             <li>• Describe what state to store on-chain</li>
             <li>• Say who can call each method (anyone, owner only, etc)</li>
           </ul>

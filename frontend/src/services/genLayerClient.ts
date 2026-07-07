@@ -18,7 +18,7 @@ const chainByNetwork = {
 
 export const getGenLayerChain = (network: Network = 'studionet') => chainByNetwork[network]
 
-// Keyless client — safe for view/read calls only. Cannot sign anything.
+// Keyless client - safe for view/read calls only. Cannot sign anything.
 export const createReadClient = (network: Network = 'studionet') =>
   createClient({ chain: getGenLayerChain(network) })
 
