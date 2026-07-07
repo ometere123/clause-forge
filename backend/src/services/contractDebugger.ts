@@ -1,11 +1,9 @@
-import Groq from 'groq-sdk'
-import { config } from '../config'
+import { completeAi } from './aiProvider'
 import { buildFrontendCallMap, extractContractStructure } from './contractAnalysis'
 import { buildCompactDebugSystemPrompt } from './genlayerKnowledge'
 import { normalizeContractCode } from './contractCode'
 import type { FrontendCallMapItem } from '../types'
 
-const buildGroq = (apiKey?: string) => new Groq({ apiKey: apiKey || config.groq.apiKey })
 
 interface OperationalError extends Error {
   statusCode?: number
@@ -19,7 +17,7 @@ const createOperationalError = (message: string, statusCode = 502): OperationalE
   return error
 }
 
-const toGroqDebugError = (err: unknown): OperationalError => {
+const toAiDebugError = (err: unknown): OperationalError => {
   const candidate = err as {
     status?: number
     statusCode?: number
@@ -35,15 +33,15 @@ const toGroqDebugError = (err: unknown): OperationalError => {
 
   if (status === 401 || status === 403 || /invalid.*api.*key|unauthorized|forbidden/.test(text)) {
     return createOperationalError(
-      'Groq rejected the API key. Check your Groq key, remove extra spaces, or try the system free tier.',
+      'The AI provider rejected the API key. Check your key, remove extra spaces, or try the system free tier.',
       401
     )
   }
 
   if (status === 429 || /rate.*limit|quota|too many/.test(text)) {
-    const detail = upstreamMessage ? ` Groq said: ${upstreamMessage}` : ''
+    const detail = upstreamMessage ? ` Provider said: ${upstreamMessage}` : ''
     return createOperationalError(
-      `Groq rate limit or quota was reached. This can happen when one debug request is too large for the key's token-per-minute limit.${detail}`,
+      `AI provider rate limit or quota was reached. This can happen when one debug request is too large for the key's token-per-minute limit.${detail}`,
       429
     )
   }
@@ -64,8 +62,8 @@ const toGroqDebugError = (err: unknown): OperationalError => {
 
   return createOperationalError(
     upstreamMessage
-      ? `Groq could not complete the debug request: ${upstreamMessage}`
-      : 'Groq could not complete the debug request. Check Railway logs for the upstream error.',
+      ? `The AI provider could not complete the debug request: ${upstreamMessage}`
+      : 'The AI provider could not complete the debug request. Check Worker logs for the upstream error.',
     status >= 400 && status < 600 ? status : 502
   )
 }
@@ -92,7 +90,7 @@ const truncateMiddle = (value: string, maxChars: number) => {
   const tailLength = maxChars - headLength
   return `${normalized.slice(0, headLength)}
 
-# ... Clause Forge trimmed the middle of this input to fit Groq rate limits ...
+# ... Clause Forge trimmed the middle of this input to fit AI provider rate limits ...
 
 ${normalized.slice(-tailLength)}`
 }
@@ -186,14 +184,9 @@ export const debugContract = async (
   request: DebugContractRequest,
   apiKey?: string
 ): Promise<DebugContractResult> => {
-  const groq = buildGroq(apiKey)
   const compactRequest = compactDebugRequest(request)
 
-  const completion = await groq.chat.completions
-    .create({
-      model: config.groq.model,
-      max_tokens: config.groq.maxTokens,
-      messages: [
+  const completion = await completeAi([
         { role: 'system', content: buildCompactDebugSystemPrompt() },
         {
           role: 'user',
@@ -217,13 +210,12 @@ ${compactRequest.previousFix || ''}
 
 Return a complete fixed contract and explain the fix.`,
         },
-      ],
-    })
-    .catch((err) => {
-      throw toGroqDebugError(err)
-    })
+  ], { apiKey }).catch((err: unknown) => {
+    if ((err as { isOperational?: boolean }).isOperational) throw err
+    throw toAiDebugError(err)
+  })
 
-  const content = completion.choices[0]?.message?.content ?? ''
+  const content = completion.content
   if (!content.trim()) {
     throw createOperationalError(
       'The AI provider returned an empty debug response. Try again with the exact traceback and a shorter contract.',
@@ -248,6 +240,9 @@ Return a complete fixed contract and explain the fix.`,
     ...parsed,
     fixedCode,
     frontendCallMap,
-    modelUsed: config.groq.model,
+    modelUsed: completion.provider + ':' + completion.model,
   }
 }
+
+
+

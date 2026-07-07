@@ -1,40 +1,30 @@
 import { useState } from 'react'
+import { ShieldCheck, Wallet } from 'lucide-react'
 import { useContractStore } from '@/store'
-import { useContractDeployment } from '@/hooks/useContractDeployment'
 import { useWallet } from '@/hooks/useWallet'
-import { createGenLayerClient, createInjectedClient } from '@/services/genLayerClient'
+import { createInjectedClient } from '@/services/genLayerClient'
+import { recordDeployment } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { getAddressExplorerUrl } from '@/utils/explorer'
 import { normalizeContractCode } from '@/utils/contractCode'
-import { GENLAYER_NETWORKS, getNetworkConfig } from '@/config/networks'
-import type { DeploymentMode, DeploymentResult, Network } from '@/types'
+import { GENLAYER_NETWORKS, UPCOMING_NETWORKS, getNetworkConfig } from '@/config/networks'
+import type { DeploymentResult, Network } from '@/types'
 
 interface DeployPanelProps {
   onDeployed: (address: string, network: Network) => void
 }
 
-type WalletMode = 'active' | 'system'
-
 export default function DeployPanel({ onDeployed }: DeployPanelProps) {
-  const { generatedContract, deploymentResult, setDeploymentResult } = useContractStore()
-  const { deploy: deployViaBackend, isDeploying: isBackendDeploying, error: backendError } = useContractDeployment()
-  const {
-    wallet,
-    shortAddress,
-    activeWalletType,
-    activeWalletLabel,
-    isExternalActive,
-  } = useWallet()
+  const { generatedContract, deploymentResult, setDeploymentResult, addToHistory } = useContractStore()
+  const { wallet, shortAddress, isConnected, hasInjectedProvider, connectWallet } = useWallet()
 
-  const [mode, setMode] = useState<WalletMode>('active')
   const [selectedNetwork, setSelectedNetwork] = useState<Network>('studionet')
-  const [isFrontendDeploying, setIsFrontendDeploying] = useState(false)
-  const [frontendError, setFrontendError] = useState<string | null>(null)
+  const [isDeploying, setIsDeploying] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!generatedContract) return null
 
-  const isDeploying = isBackendDeploying || isFrontendDeploying
-  const error = frontendError ?? (backendError ? (backendError as Error).message : null)
   const selectedNetworkConfig = getNetworkConfig(selectedNetwork)
 
   const extractContractAddress = (receipt: any): string | undefined =>
@@ -44,82 +34,76 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
     receipt?.contractAddress ??
     receipt?.to_address
 
-  const formatDeploymentMode = (deploymentMode: DeploymentMode) => {
-    if (deploymentMode === 'external-wallet') return 'External Wallet'
-    if (deploymentMode === 'wallet') return 'Browser Wallet'
-    return 'Clause Forge'
-  }
-
-  const deployFromClient = async (
-    client: any,
-    deployedBy: string,
-    deploymentMode: DeploymentMode
-  ) => {
-    const code = normalizeContractCode(generatedContract.generatedCode)
-
-    const hash: string = await client.deployContract({
-      code,
-      args: [],
-      leaderOnly: false,
-    })
-
-    const receipt: any = await client.waitForTransactionReceipt({
-      hash,
-      status: 'FINALIZED',
-      retries: selectedNetwork === 'bradbury' ? 100 : 60,
-      interval: 3000,
-    })
-
-    const contractAddress = extractContractAddress(receipt)
-    if (!contractAddress) {
-      throw new Error('Deployment finalized, but no contract address was returned by GenLayer')
+  const handleConnect = async () => {
+    setError(null)
+    setIsConnecting(true)
+    try {
+      await connectWallet(selectedNetwork)
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not connect wallet')
+    } finally {
+      setIsConnecting(false)
     }
-
-    const result: DeploymentResult = {
-      transactionHash: hash,
-      contractAddress,
-      network: selectedNetwork,
-      deployedAt: new Date().toISOString(),
-      deployedBy,
-      mode: deploymentMode,
-    }
-
-    setDeploymentResult(result)
   }
 
   const handleDeploy = async () => {
-    setFrontendError(null)
+    setError(null)
 
-    if (mode === 'active') {
-      setIsFrontendDeploying(true)
-      try {
-        if (!wallet) {
-          throw new Error('Select a wallet first.')
-        }
+    if (!wallet) {
+      await handleConnect()
+      return
+    }
 
-        if (activeWalletType === 'external' || wallet.isExternal) {
-          const client = await createInjectedClient(selectedNetwork, wallet.address) as any
-          await deployFromClient(client, wallet.address, 'external-wallet')
-        } else {
-          if (!wallet.privateKey) {
-            throw new Error('Selected browser wallet has no private key.')
-          }
-          const client = createGenLayerClient(selectedNetwork, wallet.privateKey) as any
-          await deployFromClient(client, wallet.address, 'wallet')
-        }
-      } catch (err: any) {
-        setFrontendError(err?.message ?? 'Deployment failed')
-      } finally {
-        setIsFrontendDeploying(false)
+    setIsDeploying(true)
+    try {
+      const client = await createInjectedClient(selectedNetwork, wallet.address) as any
+      const code = normalizeContractCode(generatedContract.generatedCode)
+
+      // Required by GenLayer before deploys/writes; safe to call repeatedly.
+      await client.initializeConsensusSmartContract?.()
+
+      const hash: string = await client.deployContract({
+        code,
+        args: [],
+        leaderOnly: false,
+      })
+
+      const receipt: any = await client.waitForTransactionReceipt({
+        hash,
+        status: 'FINALIZED',
+        retries: selectedNetwork === 'studionet' ? 60 : 100,
+        interval: 3000,
+      })
+
+      const contractAddress = extractContractAddress(receipt)
+      if (!contractAddress) {
+        throw new Error('Deployment finalized, but no contract address was returned by GenLayer')
       }
-    } else {
-      // Deploy via backend system wallet
-      deployViaBackend(
-        generatedContract.generationId,
-        normalizeContractCode(generatedContract.generatedCode),
-        'system',
-        selectedNetwork
-      )
+
+      const result: DeploymentResult = {
+        transactionHash: hash,
+        contractAddress,
+        network: selectedNetwork,
+        deployedAt: new Date().toISOString(),
+        deployedBy: wallet.address,
+        mode: 'external-wallet',
+      }
+
+      setDeploymentResult(result)
+      addToHistory(result)
+
+      // Index the deployment (best-effort, never blocks the success path)
+      void recordDeployment({
+        generationId: generatedContract.generationId,
+        contractAddress,
+        transactionHash: hash,
+        network: selectedNetwork,
+        deployedBy: wallet.address,
+      })
+    } catch (err: any) {
+      setError(err?.message ?? 'Deployment failed')
+    } finally {
+      setIsDeploying(false)
     }
   }
 
@@ -156,7 +140,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
             <div className="grid grid-cols-1 sm:flex gap-3 sm:gap-6 text-sm">
               <div><p className="text-xs text-muted-foreground">Network</p><p className="font-medium capitalize">{deploymentResult.network}</p></div>
               <div><p className="text-xs text-muted-foreground">Deployed at</p><p className="font-medium">{new Date(deploymentResult.deployedAt).toLocaleTimeString()}</p></div>
-              <div><p className="text-xs text-muted-foreground">Mode</p><p className="font-medium">{formatDeploymentMode(deploymentResult.mode)}</p></div>
+              <div><p className="text-xs text-muted-foreground">Deployer</p><p className="font-medium font-mono">{`${deploymentResult.deployedBy.slice(0, 6)}...${deploymentResult.deployedBy.slice(-4)}`}</p></div>
             </div>
           </div>
         </div>
@@ -223,53 +207,52 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
               )}
             </button>
           ))}
+          {UPCOMING_NETWORKS.map((network) => (
+            <div
+              key={network.id}
+              className="flex-1 border-2 border-dashed border-border rounded-lg px-4 py-3 text-sm text-left opacity-60 cursor-not-allowed select-none"
+            >
+              <p className="font-semibold flex items-center gap-2">
+                {network.label}
+                <span className="text-[10px] font-medium uppercase tracking-wide bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                  Coming soon
+                </span>
+              </p>
+              <p className="text-muted-foreground text-xs mt-0.5">{network.description}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Deployer mode */}
+      {/* Wallet — the only signing path */}
       <div className="border border-border rounded-xl p-4 sm:p-5 space-y-3">
-        <p className="text-sm font-semibold">Deploy with</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            onClick={() => setMode('active')}
-            className={cn(
-              'border-2 rounded-lg px-4 py-3 text-sm text-left transition',
-              mode === 'active' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'
-            )}
-          >
-            <p className="font-semibold">Active Wallet</p>
-            <p className="text-muted-foreground text-xs mt-0.5 font-mono">{shortAddress ?? 'select wallet'}</p>
-            <p className="text-muted-foreground text-xs mt-1">
-              {isExternalActive
-                ? 'External wallet signs and becomes the deployer'
-                : `${activeWalletLabel} signs locally and becomes the deployer`}
-            </p>
-          </button>
-
-          <button
-            onClick={() => setMode('system')}
-            className={cn(
-              'border-2 rounded-lg px-4 py-3 text-sm text-left transition',
-              mode === 'system' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'
-            )}
-          >
-            <p className="font-semibold">Clause Forge</p>
-            <p className="text-muted-foreground text-xs mt-0.5">System wallet pays gas</p>
-            <p className="text-muted-foreground text-xs mt-1">Deployed via backend</p>
-          </button>
-        </div>
-        <p className="text-xs text-muted-foreground pt-1">
-          Use the wallet menu in the header to pick a browser account or connect an external wallet. {selectedNetworkConfig.label} deployments need a funded wallet on that network.
+        <p className="text-sm font-semibold flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          Your wallet signs the deployment
         </p>
-      </div>
-
-      {/* Cost estimate */}
-      <div className="border border-border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between text-sm">
-        <div>
-          <p className="font-medium">Estimated generation cost</p>
-          <p className="text-muted-foreground text-xs mt-0.5">Gas for deployment depends on contract size</p>
-        </div>
-        <p className="font-semibold">${generatedContract.estimation.estimatedCostUsd.toFixed(4)}</p>
+        {isConnected && wallet ? (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+            <span className="font-mono">{shortAddress}</span>
+            <span className="text-muted-foreground text-xs">will be the contract deployer/owner</span>
+          </div>
+        ) : (
+          <button
+            onClick={handleConnect}
+            disabled={isConnecting}
+            className="flex items-center gap-2 text-sm font-medium bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition disabled:opacity-60"
+          >
+            <Wallet className="w-4 h-4" />
+            {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+          </button>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Clause Forge never sees or stores your keys — deployment is signed in your own wallet
+          (MetaMask, Rabby, ...). {selectedNetworkConfig.isProductionLike
+            ? `You need test GEN on ${selectedNetworkConfig.label} to pay for deployment.`
+            : ''}
+          {!hasInjectedProvider && ' No wallet detected: install MetaMask or Rabby, then reload.'}
+        </p>
       </div>
 
       {error && (
@@ -280,7 +263,7 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
 
       <button
         onClick={handleDeploy}
-        disabled={isDeploying}
+        disabled={isDeploying || isConnecting}
         className={cn(
           'w-full py-3.5 rounded-xl font-semibold text-sm transition',
           isDeploying ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground hover:bg-primary/90'
@@ -291,7 +274,9 @@ export default function DeployPanel({ onDeployed }: DeployPanelProps) {
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             Deploying to {selectedNetworkConfig.label}... (1-3 min)
           </span>
-        ) : `Deploy to ${selectedNetworkConfig.label}`}
+        ) : isConnected
+          ? `Deploy to ${selectedNetworkConfig.label}`
+          : 'Connect Wallet to Deploy'}
       </button>
     </div>
   )

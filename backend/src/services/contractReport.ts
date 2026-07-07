@@ -281,11 +281,10 @@ const scanBadPatterns = (code: string, kind: ContractKind, callMap: FrontendCall
         : 'Important persistent fields appear declared in the class body.',
     },
     {
-      pattern: 'random/time/uuid',
-      status: /\b(time\.time|datetime\.now|random\.random|uuid\.uuid4)\s*\(/.test(code)
-        ? 'fail'
-        : 'pass',
-      detail: 'Avoid nondeterministic Python runtime helpers inside GenVM contracts.',
+      pattern: 'random/uuid',
+      status: /\b(random\.random|uuid\.uuid4)\s*\(/.test(code) ? 'fail' : 'pass',
+      detail:
+        'Avoid nondeterministic randomness helpers. datetime.now()/time.time() are fine — GenVM pins them to the transaction timestamp.',
     },
     {
       pattern: 'external Python HTTP libraries',

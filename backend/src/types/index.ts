@@ -73,6 +73,21 @@ export interface ContractGenerationReport {
   }>
 }
 
+export interface ContractPlainSummary {
+  headline: string
+  whatItDoes: string
+  whatItStores: string[]
+  actions: string[]
+  reads: string[]
+  notes: string[]
+}
+
+export interface AutoFixInfo {
+  attempted: boolean
+  succeeded: boolean
+  issuesFixed: string[]
+}
+
 export interface GeneratedContract {
   generationId: string
   generatedCode: string
@@ -81,6 +96,9 @@ export interface GeneratedContract {
   stateVariables: Record<string, string>
   frontendCallMap?: FrontendCallMapItem[]
   generationReport?: ContractGenerationReport
+  plainSummary?: ContractPlainSummary
+  validation?: ValidationResult
+  autoFix?: AutoFixInfo
   estimation: ContractEstimation
   originalDescription: string
   modelUsed: string
@@ -115,8 +133,8 @@ export interface ValidationResult {
 
 // ─── Deployment ───────────────────────────────────────────────────────────────
 
-export type DeploymentMode = 'system' | 'wallet'
-export type Network = 'studionet' | 'bradbury'
+export type DeploymentMode = 'external-wallet'
+export type Network = 'studionet' | 'asimov' | 'bradbury'
 
 export interface DeploymentResult {
   transactionHash: string
@@ -131,19 +149,21 @@ export interface DeploymentResult {
 
 export interface GenerateRequest {
   description: string
-  model?: 'groq'
+  model?: 'groq' | 'openai'
 }
 
 export interface ValidateRequest {
   code: string
 }
 
-export interface DeployRequest {
+// Deployments are signed in the user's browser wallet; the backend only
+// indexes completed deploys and never receives code-signing keys.
+export interface DeploymentRecord {
   generationId: string
-  code: string
-  mode: DeploymentMode
+  contractAddress: string
+  transactionHash: string
   network: Network
-  walletPrivateKey?: string
+  deployedBy: string
 }
 
 export interface ForkRequest {
@@ -170,3 +190,4 @@ export interface SimulationResult {
   error: string | null
   executionTimeMs: number
 }
+

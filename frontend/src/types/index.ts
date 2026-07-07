@@ -73,6 +73,21 @@ export interface ContractGenerationReport {
   }>
 }
 
+export interface ContractPlainSummary {
+  headline: string
+  whatItDoes: string
+  whatItStores: string[]
+  actions: string[]
+  reads: string[]
+  notes: string[]
+}
+
+export interface AutoFixInfo {
+  attempted: boolean
+  succeeded: boolean
+  issuesFixed: string[]
+}
+
 export interface GeneratedContract {
   generationId: string
   generatedCode: string
@@ -81,6 +96,9 @@ export interface GeneratedContract {
   stateVariables: Record<string, string>
   frontendCallMap?: FrontendCallMapItem[]
   generationReport?: ContractGenerationReport
+  plainSummary?: ContractPlainSummary
+  validation?: ValidationResult
+  autoFix?: AutoFixInfo
   estimation: ContractEstimation
   originalDescription: string
   modelUsed: string
@@ -98,8 +116,8 @@ export interface FrontendCallMapItem {
 
 // ─── Deployment ─────────────────────────────────────────────────────────────
 
-export type DeploymentMode = 'system' | 'wallet' | 'external-wallet'
-export type Network = 'studionet' | 'bradbury'
+export type DeploymentMode = 'external-wallet'
+export type Network = 'studionet' | 'asimov' | 'bradbury'
 export type DeploymentStatus = 'idle' | 'pending' | 'accepted' | 'finalized' | 'failed'
 
 export interface DeploymentResult {
@@ -164,12 +182,9 @@ export interface MarketplaceListing {
 
 export interface WalletAccount {
   address: string
-  privateKey?: string
   isGenerated: boolean
   isExternal?: boolean
 }
-
-export type ActiveWalletType = 'browser' | 'external'
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
@@ -180,7 +195,7 @@ export interface ApiResponse<T> {
 
 export interface GenerateRequest {
   description: string
-  model?: 'groq'
+  model?: 'groq' | 'openai'
 }
 
 export interface DebugContractRequest {
@@ -201,10 +216,13 @@ export interface DebugContractResult {
   modelUsed: string
 }
 
-export interface DeployRequest {
+// Sent AFTER a successful in-browser deploy so Clause Forge can index it.
+// Never contains keys — signing happens entirely in the user's wallet.
+export interface DeploymentRecord {
   generationId: string
-  code: string
-  mode: DeploymentMode
+  contractAddress: string
+  transactionHash: string
   network: Network
-  walletPrivateKey?: string
+  deployedBy: string
 }
+

@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clause-forge-api",
+  "main": "backend/src/worker.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+  // Backend-only Worker. Frontend deploys separately to Vercel.
+  // Secrets (set once with `npx wrangler secret put <NAME>`):
+  //   SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY
+  // Optional: GROQ_API_KEY, OPENAI_MODEL, FRONTEND_URL, ALLOWED_ORIGINS, STUDIONET_RPC
+}

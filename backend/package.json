@@ -3,28 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "typecheck": "tsc --noEmit",
+    "dev": "wrangler dev --cwd .."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.0",
-    "express-rate-limit": "^7.4.0",
-    "genlayer-js": "^1.1.8",
     "groq-sdk": "^0.7.0",
-    "helmet": "^8.0.0",
-    "openai": "^6.37.0",
+    "hono": "^4.12.28",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
     "@types/node": "^22.7.4",
-    "nodemon": "^3.1.7",
-    "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
   }
 }

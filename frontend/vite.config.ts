@@ -12,8 +12,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // wrangler dev (Cloudflare Workers local runtime) listens on 8787
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8787',
         changeOrigin: true,
       },
     },

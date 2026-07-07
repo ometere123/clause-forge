@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import ContractLintPanel from '@/components/ContractLintPanel'
 import FrontendCallMapPanel from '@/components/FrontendCallMapPanel'
 import ContractGenerationReportPanel from '@/components/ContractGenerationReportPanel'
+import PlainSummaryPanel from '@/components/PlainSummaryPanel'
 import { normalizeContractCode } from '@/utils/contractCode'
 
 interface CodePreviewProps {
@@ -30,7 +31,12 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
     const codeChanged = normalizedCode !== currentCode
 
     setEditedCode(normalizedCode)
-    setGeneratedContract({ ...generatedContract, generatedCode: normalizedCode })
+    setGeneratedContract({
+      ...generatedContract,
+      generatedCode: normalizedCode,
+      // Manual edits invalidate the generation-time validation verdict
+      ...(codeChanged ? { validation: undefined, autoFix: undefined } : {}),
+    })
     if (codeChanged) {
       onCodeChanged?.()
     }
@@ -60,7 +66,14 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+    <div className="space-y-5">
+      <PlainSummaryPanel
+        summary={generatedContract.plainSummary}
+        validation={generatedContract.validation}
+        autoFix={generatedContract.autoFix}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
       {/* Code panel */}
       <div className="lg:col-span-2 space-y-3">
         {/* Tabs */}
@@ -288,6 +301,7 @@ export default function CodePreview({ onDeploy, onCodeChanged }: CodePreviewProp
         >
           Choose Network & Deploy →
         </button>
+      </div>
       </div>
     </div>
   )

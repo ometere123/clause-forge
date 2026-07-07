@@ -4,33 +4,13 @@ import { useContractStore } from '@/store'
 import { cn } from '@/lib/utils'
 import ApiKeyPanel from '@/components/ApiKeyPanel'
 import { createImportedContract } from '@/utils/contractImport'
+import { CONTRACT_TEMPLATES, type ContractTemplate, type TemplateKind } from '@/config/templates'
 
-const TEMPLATES = [
-  {
-    id: 'kyc',
-    name: 'KYC Verification',
-    example:
-      'Create a contract that takes a person\'s name and ID number. Use AI to verify if the person exists in public records. Store the verification result and timestamp.',
-  },
-  {
-    id: 'scoring',
-    name: 'Candidate Scoring',
-    example:
-      'Create a contract that evaluates a candidate based on their resume text. Score them from 1 to 10 using AI and store the result. Only the owner can reset scores.',
-  },
-  {
-    id: 'voting',
-    name: 'Proposal Voting',
-    example:
-      'Create a contract where users can vote YES or NO on a proposal. Track all votes, prevent double voting, and return the aggregated result.',
-  },
-  {
-    id: 'enrichment',
-    name: 'Data Enrichment',
-    example:
-      'Create a contract that takes a company name, fetches public information about it from the web, and stores a summary of the company profile.',
-  },
-]
+const KIND_BADGE: Record<TemplateKind, { label: string; className: string }> = {
+  'ai-judgement': { label: 'AI', className: 'bg-purple-100 text-purple-700' },
+  'web-aware': { label: 'Web', className: 'bg-blue-100 text-blue-700' },
+  deterministic: { label: 'Code', className: 'bg-green-100 text-green-700' },
+}
 
 const IMPORT_PLACEHOLDER = `# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
@@ -62,8 +42,8 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
     if (ok) onGenerated()
   }
 
-  const handleTemplate = (template: typeof TEMPLATES[number]) => {
-    setDescription(template.example)
+  const handleTemplate = (template: ContractTemplate) => {
+    setDescription(template.prompt)
     setSelectedTemplate(template.id)
     setMode('generate')
   }
@@ -173,24 +153,35 @@ export default function DescriptionInput({ onGenerated }: DescriptionInputProps)
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 sm:gap-6">
-      {/* Templates */}
+      {/* Templates — curated from the official GenLayer ideas catalogue */}
       <div className="lg:col-span-1">
-        <p className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">
+        <p className="text-sm font-semibold mb-1 text-muted-foreground uppercase tracking-wide">
           Templates
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-2">
-          {TEMPLATES.map((t) => (
+        <p className="text-xs text-muted-foreground mb-3">
+          Start from a proven GenLayer pattern, then edit the description.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 lg:max-h-[60vh] lg:overflow-y-auto lg:pr-1">
+          {CONTRACT_TEMPLATES.map((t) => (
             <button
               key={t.id}
               onClick={() => handleTemplate(t)}
               className={cn(
-                'w-full text-left px-3 py-2.5 rounded border text-sm transition min-h-12',
+                'w-full text-left px-3 py-2.5 rounded border text-sm transition',
                 selectedTemplate === t.id
-                  ? 'border-primary bg-primary/5 text-primary'
+                  ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/40'
               )}
             >
-              {t.name}
+              <span className="flex items-center justify-between gap-2">
+                <span className={cn('font-medium', selectedTemplate === t.id && 'text-primary')}>
+                  {t.name}
+                </span>
+                <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0', KIND_BADGE[t.kind].className)}>
+                  {KIND_BADGE[t.kind].label}
+                </span>
+              </span>
+              <span className="block text-xs text-muted-foreground mt-0.5">{t.tagline}</span>
             </button>
           ))}
         </div>

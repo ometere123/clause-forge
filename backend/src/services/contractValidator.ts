@@ -577,12 +577,10 @@ const runSecurityChecks = (
     { pattern: 'import urllib', name: 'urllib' },
     { pattern: 'import httpx', name: 'httpx' },
     { pattern: 'import aiohttp', name: 'aiohttp' },
+    // Note: datetime.now()/time.time() are ALLOWED — GenVM pins the Python
+    // clock to the transaction datetime, so they are deterministic.
     { pattern: 'import random', name: 'random' },
     { pattern: 'random.random', name: 'random.random()' },
-    { pattern: 'import datetime', name: 'datetime' },
-    { pattern: 'datetime.now', name: 'datetime.now()' },
-    { pattern: 'import time', name: 'time' },
-    { pattern: 'time.time', name: 'time.time()' },
     { pattern: 'uuid.uuid4', name: 'uuid.uuid4()' },
     { pattern: 'firebase', name: 'Firebase/Admin SDK' },
     { pattern: 'firestore', name: 'Firestore' },
@@ -603,7 +601,7 @@ const runSecurityChecks = (
       type: 'SyntaxError',
       severity: 'critical',
       message: 'Solidity-style syntax detected in a GenLayer Intelligent Contract in Python',
-      suggestion: 'Use gl.message.sender_address, frontend-passed timestamps, and Python class syntax.',
+      suggestion: 'Use gl.message.sender_address, datetime.now(timezone.utc) for transaction time, and Python class syntax.',
     })
   }
 

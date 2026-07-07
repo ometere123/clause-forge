@@ -27,7 +27,7 @@ Storage rules:
 - Use @allow_storage and @dataclass together for custom storage objects.
 - Import dataclass when using @dataclass.
 - Use u256 for token/value amounts.
-- Use u64/u32 for counters and frontend-passed timestamps.
+- Use u64/u32 for counters and unix-second timestamps derived from datetime.now(timezone.utc).
 - Avoid float; use scaled integers such as bps.
 - Avoid TreeMap .values(), .items(), storage list comprehensions, and loops over storage collections.
 - Use secondary indexes such as seen: TreeMap[str, u64] for duplicate checks.
@@ -171,9 +171,35 @@ Web and LLM rules:
 - Use real public APIs or user-supplied URLs; do not invent fake endpoints.
 `
 
+const TIME_RULES = `
+Time and timestamp rules (verified against current GenLayer docs):
+- GenVM pins the Python clock to the transaction datetime, so datetime.now(timezone.utc) and time.time() are DETERMINISTIC and safe: every validator sees the same value.
+- For unix-seconds arithmetic (expiries, deltas): now = int(datetime.now(timezone.utc).timestamp()) with from datetime import datetime, timezone.
+- For ISO 8601 audit strings: datetime.now(timezone.utc).isoformat() or gl.message_raw['datetime'].
+- Store timestamps as u64 unix seconds or str ISO strings.
+- The clock is the TRANSACTION time, not wall-clock "now" — use it for relative arithmetic and timestamping, never for "is it past 5pm right now".
+- There is NO block number, block hash, gl.block.timestamp, or gl.message.timestamp.
+- Do not require the frontend to pass timestamps as parameters; read the transaction time in-contract instead.
+`
+
+const API_CANON_RULES = `
+Canonical GenLayer API names (verified against current docs — do not invent variants):
+- LLM: gl.nondet.exec_prompt(prompt), gl.nondet.exec_prompt(prompt, response_format="json"), gl.nondet.exec_prompt(prompt, images=[bytes]) (max 2 images). All must run inside a nondet block.
+- Web: gl.nondet.web.get(url) / gl.nondet.web.request(url, method="POST", body={...}). Responses expose response.status_code and response.body (bytes — decode with .decode("utf-8")).
+- Rendering: gl.nondet.web.render(url, mode="html") for page content, gl.nondet.web.render(url, mode="screenshot") for image bytes.
+- Equivalence: gl.eq_principle.strict_eq(fn), gl.eq_principle.prompt_comparative(fn, criteria), gl.eq_principle.prompt_non_comparative(fn, task=..., criteria=...), gl.vm.run_nondet_unsafe(leader_fn, validator_fn) with gl.vm.Return leader results.
+- Cross-contract: gl.get_contract_at(address) — NOT gl.contract.get_at. Child deploys: gl.deploy_contract(code=...).
+- Errors: raise gl.vm.UserError("message"). Catch with except gl.vm.UserError.
+- Storage ints: u8..u256 / i8..i256; bigint is a valid alias for unbounded int in storage when truly needed.
+- gl.message fields: sender_address, origin_address, contract_address, value (payable only), chain_id. Extra metadata (datetime ISO string, is_init) lives in gl.message_raw.
+- Storage writes, contract calls, and message emission must happen OUTSIDE nondet blocks; all gl.nondet.* calls must happen INSIDE them. Never nest nondet blocks.
+`
+
 const BAD_PATTERN_RULES = `
 Bad pattern rules:
-- Reject or rewrite time.time(), datetime.now(), random.random(), uuid.uuid4(), requests.get(), urllib/httpx/aiohttp, and normal external HTTP libraries.
+- Reject or rewrite random.random(), uuid.uuid4(), requests.get(), urllib/httpx/aiohttp, and normal external HTTP libraries.
+- datetime.now()/time.time() are allowed (deterministic transaction time); do NOT rewrite them.
+- For randomness, derive a seed from deterministic inputs (ids, addresses, counters) instead of random.random().
 - Reject or rewrite raw gl.nondet output written directly to storage.
 - Reject dict/list persistent state for important records.
 - Reject frontend-only verification, Firebase/Admin SDK as final source of truth, hidden admin mutation without owner/resolver checks, and vague prompts like "judge if this is good".
@@ -245,6 +271,7 @@ Game / multi-entity state rules (board games, trading games, match-based apps):
 Single rule to remember: for multi-entity game state, generate a JSON-backed flat state machine, never a nested Python/dataclass object graph.
 `
 
+const APP_TEMPLATES = {
   escrow: `
 Escrow template rules:
 - Use one reusable contract with create_agreement, fund_agreement, submit_completion, raise_dispute, resolve_dispute, release/refund as needed.
@@ -275,7 +302,7 @@ Voting template rules:
 `,
   oracle: `
 Oracle template rules:
-- Store source URL/API, latest value, timestamp from frontend or source, reason, and freshness status.
+- Store source URL/API, latest value, transaction timestamp (datetime.now(timezone.utc)), reason, and freshness status.
 - Include unavailable/stale fallback behavior.
 - Avoid strict equality when live source output is unstable.
 `,
@@ -336,6 +363,8 @@ export const buildGenerationSystemPrompt = (description: string, legacyPrompt: s
     STORAGE_RULES,
     SCHEMA_RULES,
     CONSENSUS_RULES,
+    API_CANON_RULES,
+    TIME_RULES,
     FRONTEND_RULES,
     INTEGRATION_RULES,
     BAD_PATTERN_RULES,
@@ -373,6 +402,8 @@ export const buildDebugSystemPrompt = () => [
   STORAGE_RULES,
   SCHEMA_RULES,
   CONSENSUS_RULES,
+  API_CANON_RULES,
+  TIME_RULES,
   LLM_WEB_RULES,
   VALUE_RULES,
   FRONTEND_RULES,
@@ -431,7 +462,9 @@ Hard rules:
 - If traceback points to plain English in the .py file, diagnose pasted explanation text.
 - Do not invent unavailable GenLayer APIs.
 - Use gl.vm.UserError for expected user-facing errors.
-- Never use time.time(), datetime.now(), random.random(), uuid.uuid4(), requests/http libraries, Firebase/Admin SDK, or frontend-only verification inside the contract.
+- Never use random.random(), uuid.uuid4(), requests/http libraries, Firebase/Admin SDK, or frontend-only verification inside the contract.
+- datetime.now(timezone.utc) and time.time() ARE allowed — GenVM pins the clock to the transaction datetime, making them deterministic.
+- Cross-contract calls use gl.get_contract_at(address); web responses expose response.status_code and response.body.
 
 AI/web rules:
 - Do not use GenLayer as a generic AI backend. The contract must make the consensus-critical judgement from claim + evidence.

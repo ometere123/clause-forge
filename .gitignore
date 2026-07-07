@@ -8,3 +8,7 @@ dist/
 .netlify/
 frontend/dist/
 backend/dist/
+.dev.vars
+.wrangler/
+
+.vercel

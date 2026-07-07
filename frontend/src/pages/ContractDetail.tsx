@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getMarketplaceListing } from '@/services/api'
 import { parseContractMethods } from '@/utils/parseContractMethods'
-import { createGenLayerClient, getContractSource } from '@/services/genLayerClient'
+import { createInjectedClient, createReadClient, getContractSource } from '@/services/genLayerClient'
 import { cn } from '@/lib/utils'
 import { getNetworkConfig } from '@/config/networks'
 import CopyButton from '@/components/CopyButton'
@@ -60,8 +60,6 @@ export default function ContractDetail() {
     setIsRunning(true)
 
     try {
-      const client = createGenLayerClient(network) as any
-
       const parsedArgs = selectedMethod.inputs.map((input) => {
         const raw = inputs[input.name] ?? ''
         if (input.type === 'int' || input.type === 'float') return Number(raw)
@@ -72,6 +70,8 @@ export default function ContractDetail() {
       let result: unknown
 
       if (selectedMethod.isWrite) {
+        // Writes are signed by the user's own wallet — never by Clause Forge
+        const client = await createInjectedClient(network) as any
         const hash = await client.writeContract({
           account: client.account,
           address: address as `0x${string}`,
@@ -81,8 +81,8 @@ export default function ContractDetail() {
         })
         result = `Transaction sent: ${hash}`
       } else {
+        const client = createReadClient(network) as any
         result = await client.readContract({
-          account: client.account,
           address: address as `0x${string}`,
           functionName: selectedMethod.name,
           args: parsedArgs,

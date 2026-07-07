@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useContractStore } from '@/store'
 import { useWallet } from '@/hooks/useWallet'
-import { createGenLayerClient } from '@/services/genLayerClient'
+import { createInjectedClient, createReadClient } from '@/services/genLayerClient'
 import { submitToMarketplace } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { getAddressExplorerUrl } from '@/utils/explorer'
@@ -96,8 +96,6 @@ export default function ContractSimulator({
     setIsRunning(true)
 
     try {
-      const client = createGenLayerClient(network)
-
       // Parse inputs into correct types
       const parsedArgs = selectedMethod.inputs.map((input) => {
         const raw = inputs[input.name] ?? ''
@@ -109,6 +107,11 @@ export default function ContractSimulator({
       let result: unknown
 
       if (selectedMethod.isWrite) {
+        // Writes are signed by the user's own wallet — never by Clause Forge
+        if (!walletAddress) {
+          throw new Error('Connect your wallet (top right) to send write transactions.')
+        }
+        const client = await createInjectedClient(network, walletAddress) as any
         const hash = await client.writeContract({
           account: client.account!,
           address: contractAddress as `0x${string}`,
@@ -118,8 +121,8 @@ export default function ContractSimulator({
         })
         result = `Transaction sent: ${hash}`
       } else {
+        const client = createReadClient(network)
         result = await client.readContract({
-          account: client.account!,
           address: contractAddress as `0x${string}`,
           functionName: selectedMethod.name,
           args: parsedArgs,

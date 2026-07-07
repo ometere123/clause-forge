@@ -2,8 +2,8 @@ import axios from 'axios'
 import type {
   GeneratedContract,
   GenerateRequest,
-  DeployRequest,
-  DeploymentResult,
+  DeploymentRecord,
+  Network,
   ValidationResult,
   MarketplaceListing,
   ApiResponse,
@@ -52,40 +52,20 @@ export const validateContract = async (
   return data.data
 }
 
-export const simulateContract = async (payload: {
-  code: string
-  methodName: string
-  inputs: Record<string, string>
-}): Promise<{ success: boolean; output: string; error: string | null }> => {
-  const { data } = await api.post(
-    '/v1/contracts/simulate',
-    payload
-  )
-  return data.data
-}
-
-export const deployContract = async (
-  payload: DeployRequest
-): Promise<DeploymentResult> => {
-  const { data } = await api.post<ApiResponse<DeploymentResult>>(
-    '/v1/contracts/deploy',
-    payload,
-    { timeout: 240000 } // 4 minutes — deployment can take up to 3 min on Studionet
-  )
-  return data.data
-}
-
-export const getDeploymentStatus = async (
-  txHash: string
-): Promise<{ status: string; contractAddress?: string }> => {
-  const { data } = await api.get(`/api/v1/contracts/deploy-status/${txHash}`)
-  return data.data
+// Called after a successful in-browser deploy so the backend can index it.
+// Fire-and-forget: indexing failure must never break a completed deployment.
+export const recordDeployment = async (payload: DeploymentRecord): Promise<void> => {
+  try {
+    await api.post('/v1/contracts/deployments', payload)
+  } catch {
+    // Deployment already succeeded on-chain; indexing is best-effort.
+  }
 }
 
 // ─── Introspection ───────────────────────────────────────────────────────────
 
 export const getContractByAddress = async (address: string) => {
-  const { data } = await api.get(`/api/v1/contracts/address/${address}`)
+  const { data } = await api.get(`/v1/contracts/address/${address}`)
   return data.data
 }
 
@@ -118,7 +98,7 @@ export const getMarketplaceListing = async (contractAddress: string) => {
   return data.data as {
     id: string
     contractAddress: string
-    network?: 'studionet' | 'bradbury'
+    network?: Network
     name: string
     description: string
     category: string
@@ -147,7 +127,7 @@ export const submitToMarketplace = async (payload: {
   category: string
   tags: string[]
   walletAddress: string
-  network?: 'studionet' | 'bradbury'
+  network?: Network
   sourceCode?: string
 }): Promise<MarketplaceListing> => {
   const { data } = await api.post('/v1/marketplace/submit', payload)
