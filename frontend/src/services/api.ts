@@ -26,7 +26,8 @@ export const generateContract = async (
   const { data } = await api.post<ApiResponse<GeneratedContract>>(
     '/v1/contracts/generate',
     payload,
-    { headers: getGroqApiHeaders() }
+    // Generation + the self-heal repair pass can exceed the 60s client default
+    { headers: getGroqApiHeaders(), timeout: 180000 }
   )
   return data.data
 }

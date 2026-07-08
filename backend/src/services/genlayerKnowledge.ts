@@ -187,7 +187,10 @@ Canonical GenLayer API names (verified against current docs - do not invent vari
 - LLM: gl.nondet.exec_prompt(prompt), gl.nondet.exec_prompt(prompt, response_format="json"), gl.nondet.exec_prompt(prompt, images=[bytes]) (max 2 images). All must run inside a nondet block.
 - Web: gl.nondet.web.get(url) / gl.nondet.web.request(url, method="POST", body={...}). Responses expose response.status_code and response.body (bytes - decode with .decode("utf-8")).
 - Rendering: gl.nondet.web.render(url, mode="html") for page content, gl.nondet.web.render(url, mode="screenshot") for image bytes.
-- Equivalence: gl.eq_principle.strict_eq(fn), gl.eq_principle.prompt_comparative(fn, criteria), gl.eq_principle.prompt_non_comparative(fn, task=..., criteria=...), gl.vm.run_nondet_unsafe(leader_fn, validator_fn) with gl.vm.Return leader results.
+- Equivalence: gl.eq_principle.strict_eq(fn), gl.eq_principle.prompt_comparative(fn, criteria), gl.eq_principle.prompt_non_comparative(fn, task=..., criteria=...), gl.vm.run_nondet_unsafe(leader_fn, validator_fn).
+- run_nondet_unsafe contract (get this EXACTLY right): validator_fn receives the leader result as a gl.vm.Return object; check isinstance(leaders_res, gl.vm.Return), validate leaders_res.calldata (shape, enums, ranges), and return ONLY True or False. NEVER construct gl.vm.Return(...) yourself. run_nondet_unsafe returns the leader's raw value (e.g. the parsed JSON dict) - validate it again defensively before storing.
+- Copy every storage value used by leader_fn/validator_fn into a local variable BEFORE defining those functions (min_score = int(round.min_score)); never read self.x or storage objects inside a nondet block.
+- Never assign storage collections in __init__ in ANY form: both self.x = TreeMap[K, V]() and self.x = TreeMap[K, V] crash. Declared class-body fields auto-initialize; __init__ should only set primitives and owner.
 - Cross-contract: gl.get_contract_at(address) - NOT gl.contract.get_at. Child deploys: gl.deploy_contract(code=...).
 - Errors: raise gl.vm.UserError("message"). Catch with except gl.vm.UserError.
 - Storage ints: u8..u256 / i8..i256; bigint is a valid alias for unbounded int in storage when truly needed.

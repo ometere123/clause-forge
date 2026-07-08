@@ -489,13 +489,25 @@ const runStorageChecks = (
     })
   }
 
-  if (/self\.\w+\s*=\s*(TreeMap|DynArray|Array)\s*\[[^\]]*\]\s*\(/.test(code)) {
+  // Catches both self.x = TreeMap[K, V]() and self.x = TreeMap[K, V] (type
+  // object, no parens) - both are wrong; GenVM auto-initializes declared fields.
+  if (/self\.\w+\s*=\s*(TreeMap|DynArray|Array)\s*\[/.test(code)) {
     errors.push({
       type: 'StorageError',
       severity: 'critical',
-      message: 'Storage collection types cannot be instantiated (e.g. self.x = TreeMap[K, V]()) - this crashes at deploy',
+      message: 'Storage collections must not be assigned in __init__ (e.g. self.x = TreeMap[K, V] or TreeMap[K, V]()) - this crashes at deploy',
       suggestion:
-        'Only declare collections in the class body (items: TreeMap[str, u64]); GenVM auto-initializes them. Delete the assignment in __init__.',
+        'Only declare collections in the class body (items: TreeMap[str, u64]); GenVM auto-initializes them. Delete the assignment in __init__ entirely.',
+    })
+  }
+
+  if (/gl\.vm\.Return\s*\(/.test(code)) {
+    errors.push({
+      type: 'ConsensusError',
+      severity: 'critical',
+      message: 'gl.vm.Return is being constructed - it is only a received type, never built by contract code',
+      suggestion:
+        'validator_fn receives the leader result: check isinstance(leaders_res, gl.vm.Return), validate leaders_res.calldata, and return only True or False. run_nondet_unsafe then returns the leader value itself.',
     })
   }
 
