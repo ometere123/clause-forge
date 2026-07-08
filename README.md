@@ -1,299 +1,159 @@
-# Clause Forge
+<p align="center">
+  <img src="clause-forge-logo.png" alt="Clause Forge" width="180" />
+</p>
 
-Clause Forge is a no-code builder for GenLayer Intelligent Contracts.
+# CLAUSE FORGE - No-Code GenLayer Intelligent Contract Builder
 
-Describe what you want your contract to do, and Clause Forge generates, validates, previews, deploys, and lets you interact with a GenLayer Python contract.
+**Describe a contract in plain English. Get a deployable GenLayer Intelligent Contract in Python.**
+A non-developer types what they want in ordinary language. Clause Forge designs the missing technical detail, generates schema-safe GenVM code, validates it, auto-repairs it if the first draft is broken, and lets the user deploy it themselves with their own wallet.
 
-V1 focuses on the complete Studionet workflow:
+[Live app - clause-forge-iota.vercel.app](https://clause-forge-iota.vercel.app)
 
-- Plain-English contract generation
-- Debug and fix workspace for broken GenLayer contracts
-- GenLayer Python code preview and editing
-- Static validation
-- Studionet and Bradbury deployment
-- Contract method simulation/interactions
-- Marketplace submission and discovery
-- 3 free system-backed Groq AI calls per day, with bring-your-own-key support for unlimited calls
-- Browser-generated wallet, system wallet, and injected wallet deployment paths
+---
 
-V2 work has started with external wallet deployment and Bradbury testnet support. The next V2 focus is deeper production testing across wallet signing, schema loading, deployed contract interaction, and network-specific failure handling.
+## What it is
 
-## What Clause Forge Does
+Clause Forge turns a casual, non-technical description into a real GenLayer Intelligent Contract - the actors, the full lifecycle, storage fields, access control, and the "unsure/escalate" path are all inferred by the generator, not left for the user to specify. The user never touches Python unless they want to.
 
-Clause Forge helps users create GenLayer Intelligent Contracts without writing code manually.
+- **Casual-input generation** - the generator treats every description as incomplete and designs the rest: statuses, duplicate protection, transitions, escalation paths, and the getters a frontend needs
+- **Self-healing pipeline** - every generated contract is statically validated immediately; if it has critical errors, one automatic repair pass runs before the user ever sees the code
+- **Plain-English summary** - a deterministic, non-AI explainer translates the generated contract back into plain language so a non-developer can verify it matches their intent without reading Python
+- **External-wallet-only deployment** - deploys and writes are signed entirely in the user's own wallet (MetaMask, Rabby); Clause Forge never generates, stores, or transmits private keys
+- **Debug workspace** - paste a broken GenLayer contract and its error/traceback; get a diagnosis, issue category, and a complete corrected contract, with a refix loop for follow-up errors
+- **Templates from the official GenLayer ideas catalogue** - prediction markets, arbitration, escrow, bounty review, moderation, and more, pre-written to generate well
+- **Marketplace** - browse, search, and submit deployed contracts by category
 
-The core workflow is:
+---
 
-1. Describe the contract in plain English.
-2. Generate a GenLayer Python contract using AI.
-3. Preview, inspect, edit, copy, or download the generated code.
-4. Validate the contract structure.
-5. Deploy to GenLayer Studionet or Bradbury.
-6. Interact with deployed contract methods.
-7. Optionally submit the contract to the marketplace.
+## How it works
 
-Clause Forge also includes a debug workflow:
+**For a non-developer building a contract**
 
-1. Paste a broken GenLayer contract.
-2. Paste the GenVM error, traceback, schema error, or deploy error.
-3. Add optional context about the intended behavior.
-4. Generate a fixed contract.
-5. Review the original and fixed code side by side.
-6. If the fixed code reveals a new error, use Refix and paste the new error.
+1. Describe the contract idea in plain English, or pick a template
+2. Clause Forge designs the full specification and generates the Python contract
+3. If static validation finds critical issues, Clause Forge auto-repairs the contract before showing it
+4. Read the plain-English summary to confirm it does what you meant
+5. Preview, edit, copy, or download the generated code
+6. Connect your wallet and deploy to Studionet, Asimov, or Bradbury
+7. Interact with the deployed contract's view/write methods directly
+8. Optionally submit the contract to the marketplace
 
-## Why We Built It
+**For fixing a broken contract**
 
-GenLayer contracts are powerful, but they require knowledge of:
+1. Paste the existing contract code
+2. Paste the GenVM error, traceback, or schema error
+3. Optionally add the intended behavior
+4. Get a diagnosis, issue category, and a complete fixed contract
+5. Refix again if the fix reveals a new error
 
-- GenLayer Python syntax
-- GenVM storage rules
-- Public view/write methods
-- AI and web nondeterminism
-- Validator consensus
-- Deployment receipts
-- Contract schema loading
+---
 
-Clause Forge turns user intent into deployable GenLayer contract code and hides much of the complexity behind a guided UI.
+## Why we built it
 
-## Tech Stack
+GenLayer Intelligent Contracts are Python, but writing one correctly requires knowing:
 
-### Frontend
+- GenVM storage rules (`TreeMap`/`DynArray`, no bare `dict`/`list`, no float storage)
+- The exact ABI boundary - `int`/`str`/`bool` in public methods, typed integers only after casting
+- Non-deterministic blocks - what must run inside `gl.nondet.*` / `run_nondet_unsafe` vs. outside
+- The Equivalence Principle - `strict_eq`, `prompt_comparative`, `prompt_non_comparative`, or a custom `validator_fn`
+- Deterministic transaction time, deployment headers, schema-safe return types
 
-- React
-- Vite
-- TypeScript
-- Tailwind CSS
-- Zustand
-- React Query
-- React Router
-- Monaco Editor
-- GenLayerJS
+Clause Forge encodes all of this into the generator, the validator, and the debugger, so a non-developer's plain-English intent turns into a contract that actually deploys - not one that looks right and crashes on GenVM.
 
-### Backend
+---
 
-- Node.js
-- Express
-- TypeScript
-- Zod
-- Groq SDK
-- GenLayerJS
-- Supabase
+## Generation quality safeguards
 
-### Deployment
+The generator and validator are tuned against real GenVM failure modes, not just "looks like Python":
 
-- Netlify for frontend
-- Railway for backend
-- Supabase for database
-- GenLayer Studionet for V1 contract deployment
+| Check | Why it matters |
+| --- | --- |
+| No `self.x = TreeMap[K, V]` or `TreeMap[K, V]()` in `__init__` | Storage collections must only be declared in the class body; GenVM auto-initializes them - both forms crash at deploy |
+| No typed integers (`u64`, `u256`, ...) in public method parameters | JSON has no `u64`; the SDK/Studio send plain values and GenVM does not auto-cast |
+| `gl.nondet.*` calls must sit behind an equivalence guard | A bare `gl.nondet.exec_prompt`/`web.get` outside `strict_eq`/`prompt_comparative`/`run_nondet_unsafe` cannot reach validator consensus |
+| No raw `gl.vm.Return(...)` construction | `gl.vm.Return` is a received type only; `validator_fn` must check `isinstance(leaders_res, gl.vm.Return)`, validate `.calldata`, and return `True`/`False` |
+| `exec_prompt` never called with a dict | The prompt argument must be a single string, not a Python object |
+| `import json` present whenever `json.dumps`/`json.loads` is used | Missing import crashes at execution, not at generation time |
+| Deterministic transaction time is allowed | `datetime.now(timezone.utc)` and `time.time()` are pinned to the transaction timestamp on GenVM and are safe to use - the validator does not flag them |
 
-## Project Structure
+Every critical finding from the validator feeds directly into the self-heal pass: generate -> validate -> repair -> re-validate, before the result ever reaches the UI.
 
-```txt
+---
+
+## Networks
+
+| Network | Status | Notes |
+| --- | --- | --- |
+| Studionet | Live | Hosted dev network, built-in faucet |
+| Asimov | Live | Testnet for infrastructure/stress testing |
+| Bradbury | Live | Production-like testnet, real AI/LLM workloads |
+| Clarke | Coming soon | Shown as disabled in the deploy panel |
+
+---
+
+## Wallets
+
+Clause Forge holds no private keys, ever.
+
+- **Deploys and write calls** are signed entirely in the user's own browser wallet (MetaMask, Rabby, or any injected EIP-1193 provider)
+- **Reads** use a keyless client - no signing required
+- The backend has a record-only endpoint (`/api/v1/contracts/deployments`) that indexes a completed deployment's address, transaction hash, and network **after** it succeeds on-chain - it never receives or requests a key
+
+---
+
+## Tech stack
+
+| Layer | Tech |
+| --- | --- |
+| Frontend | React 18 - Vite - TypeScript - Tailwind CSS - Zustand - React Query - React Router - Monaco Editor |
+| Web3 | GenLayerJS SDK (`genlayer-js`) - injected wallet signing |
+| Backend | Cloudflare Workers - Hono - TypeScript - Zod |
+| AI | OpenAI (system default) - Groq (bring-your-own-key / fallback) |
+| Storage | Supabase - contract generations, deployed contract index, marketplace listings, AI usage quota |
+
+---
+
+## Repository
+
+```
 clause-forge/
   frontend/
     src/
-      components/
-      hooks/
-      pages/
-      services/
-      store/
-      types/
-      utils/
+      components/     DescriptionInput, CodePreview, DeployPanel, ContractSimulator,
+                       PlainSummaryPanel, ContractGenerationReportPanel, Navbar, ...
+      config/          networks.ts, templates.ts
+      hooks/           useWallet, useTheme, useContractGeneration, useContractDeployment
+      pages/           Home, Editor, DebugWorkspace, ContractDetail, Marketplace
+      services/        api.ts, genLayerClient.ts (wallet + read client)
+      store/           Zustand store
   backend/
     src/
-      config/
-      db/
-      middleware/
-      routes/
-      services/
-      types/
+      api/            contracts.ts, marketplace.ts, middleware.ts (Hono routes)
+      services/       contractGenerator, contractValidator, contractDebugger,
+                       contractSummary, contractReport, genlayerKnowledge (prompt engine),
+                       aiProvider (OpenAI/Groq switch)
+      config/         env access (Workers + local dev)
+      db/             Supabase client
+      worker.ts       Hono app entry point
+  wrangler.jsonc      Cloudflare Worker config
+  vercel.json         Vercel frontend deploy config
   database/
     migrations/
     seed.sql
 ```
 
-## Main Features
+---
 
-### Plain-English Contract Generation
+## API overview
 
-Users describe a contract idea, such as an escrow, KYC verifier, voting system, scoring contract, or data-enrichment contract.
+Backend API base: `/api/v1`
 
-The backend sends the description to Groq with a GenLayer-specific system prompt. The generator returns Python contract code with the required GenLayer structure.
-
-### Contract Preview
-
-Generated contracts are shown in a Monaco editor. Users can:
-
-- View generated Python code
-- Inspect extracted methods
-- Inspect state variables
-- Edit the generated code
-- Copy the code
-- Download the contract as a `.py` file
-
-### Validation
-
-Clause Forge runs static checks before deployment.
-
-The validator checks for:
-
-- Missing Depends header
-- Missing `from genlayer import *`
-- Missing `gl.Contract`
-- Missing public methods
-- Missing `@gl.public.view`
-- Public methods without typed parameters or return annotations
-- Normal Python `list` / `dict` / `set` used as persistent storage
-- Custom storage dataclasses missing `@allow_storage`
-- Payable/value methods that do not account for `gl.message.value`
-- Nondeterministic LLM calls without an obvious equivalence or validation strategy
-- Solidity-style syntax such as `msg.sender` or `block.timestamp`
-- Forbidden unsafe code
-- Risky storage scanning patterns
-
-### Deployment
-
-Clause Forge deploys to GenLayer Studionet and Bradbury.
-
-The app supports:
-
-- Backend/system wallet deployment
-- Browser-generated GenLayer wallets
-- External injected wallets such as MetaMask and Rabby
-- Deployment receipt handling
-- Real contract address extraction from GenLayer transaction data
-- Explorer links for deployed contract addresses
-
-### Contract Interaction
-
-After deployment, Clause Forge lets users interact with generated contract methods.
-
-It separates:
-
-- View methods
-- Write methods
-
-Users can pass inputs and see outputs, errors, or transaction hashes.
-
-### Debug Workspace
-
-The Debug Workspace helps builders repair GenLayer Intelligent Contracts.
-
-Users can paste:
-
-- Original contract code
-- GenVM error
-- Python traceback
-- Schema loading error
-- Deployment error
-- Original intent
-
-Clause Forge returns:
-
-- Issue category
-- Diagnosis
-- Complete fixed contract code
-- Explanation of the fix
-- Change list
-- Warnings
-- Frontend call map
-- Side-by-side original and fixed code
-- Refix workflow for follow-up errors
-
-This turns Clause Forge from only a generator into a create-and-debug workspace.
-
-### AI Usage Tiers
-
-V1.5 supports two AI access modes:
-
-- Free tier: 3 system-backed Groq calls per day
-- Bring your own Groq API key: unlimited generation and debugging
-
-User-provided Groq keys are stored in browser localStorage. They are sent with AI requests and are not saved to the Clause Forge database.
-
-Free-tier usage is tracked by `ai_usage_limits` in Supabase. If that table has not been migrated yet, the backend falls back to an in-memory limiter.
-
-### Marketplace
-
-The marketplace lets users:
-
-- Browse submitted contracts
-- Search listings
-- Filter by category
-- Inspect contracts by address
-- Submit deployed contracts with name, description, category, tags, wallet address, and optional source code
-
-Marketplace categories include:
-
-- Verification
-- Scoring
-- Voting
-- Data enrichment
-- Custom
-
-## Contract Generator Improvements
-
-The generator has been tuned to produce safer GenLayer contracts.
-
-The backend now includes a GenLayer Knowledge Engine with contract-specific rules for:
-
-- GenVM contract structure
-- Persistent storage
-- Schema loading
-- Nondeterministic LLM and web calls
-- Validator consensus and equivalence
-- Payable/value handling
-- Frontend call shapes
-- Common schema, storage, consensus, and integration errors
-
-It now instructs the AI to:
-
-- Always include at least one `@gl.public.view` method
-- Avoid scanning storage collections with `.values()` or `.items()`
-- Avoid list comprehensions over `TreeMap` storage
-- Use secondary indexes like `seen: TreeMap[str, u64]` for duplicate checks
-- Use `TreeMap`, `DynArray`, and `@allow_storage` for persistent storage
-- Prefer reusable platform contracts where users create records through write methods
-- Choose LLM/web logic only when the contract needs judgement, evidence, or external data
-- Use bounded JSON outputs and validation for GenLayer consensus
-- Avoid advanced features unless explicitly requested
-- Use integer math for token amounts
-- Mark paid agreements as resolved after settlement
-- Copy storage values into local variables before nondeterministic execution
-
-This helps prevent contracts that generate successfully but fail deployment, schema loading, or GenLayerJS introspection.
-
-### Frontend Call Map
-
-For generated and fixed contracts, Clause Forge now derives a frontend call map from public contract methods.
-
-The call map shows:
-
-- Method name
-- Whether the frontend should call it as a view, write, or payable write
-- Arguments to pass
-- Whether value is required
-- What the UI should refresh or display after the call
-
-This helps builders understand how to connect the generated contract to an app without guessing the ABI flow.
-
-## API Overview
-
-Backend API base:
-
-```txt
-/api/v1
 ```
-
-Important endpoints:
-
-```txt
 GET  /api/v1/health
 POST /api/v1/contracts/generate
 POST /api/v1/contracts/debug
 POST /api/v1/contracts/validate
-POST /api/v1/contracts/simulate
-POST /api/v1/contracts/deploy
+POST /api/v1/contracts/deployments      (record-only, post-deploy indexing)
 GET  /api/v1/contracts/source/:address
 GET  /api/v1/contracts/address/:address
 GET  /api/v1/marketplace
@@ -301,7 +161,40 @@ GET  /api/v1/marketplace/:address
 POST /api/v1/marketplace/submit
 ```
 
-## Local Development
+---
+
+## Deployment
+
+| Piece | Platform |
+| --- | --- |
+| Frontend | Vercel |
+| Backend API | Cloudflare Workers (Hono) |
+| Database | Supabase |
+
+Frontend and backend are deployed separately and talk to each other over CORS - the frontend's `VITE_API_URL` points at the Worker's URL.
+
+### Deploy the backend (Cloudflare Worker)
+
+```bash
+npx wrangler login
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_SERVICE_KEY
+npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put GROQ_API_KEY   # optional - BYOK / fallback path
+npx wrangler deploy
+```
+
+### Deploy the frontend (Vercel)
+
+```bash
+npx vercel deploy --prod
+```
+
+Set `VITE_API_URL` in the Vercel project to the deployed Worker's URL (e.g. `https://clause-forge-api.<subdomain>.workers.dev/api`).
+
+---
+
+## Local development
 
 Install dependencies from the repo root:
 
@@ -309,187 +202,85 @@ Install dependencies from the repo root:
 npm install
 ```
 
-Run frontend and backend together:
+Run frontend and Worker together:
 
 ```bash
 npm run dev
 ```
 
-Run frontend only:
+Run just the frontend (proxies `/api` to `localhost:8787`):
 
 ```bash
 npm run dev:frontend
 ```
 
-Run backend only:
+Run just the Worker locally:
 
 ```bash
-npm run dev:backend
+npm run dev:worker
 ```
 
-Build frontend:
+Typecheck backend + build frontend:
 
 ```bash
-npm run build:frontend
+npm run typecheck
 ```
 
-Build backend:
+## Environment variables
 
-```bash
-npm run build:backend
+### Backend (Cloudflare Worker secrets/vars)
+
 ```
-
-On Windows PowerShell, if `npm run build` is blocked by execution policy, use:
-
-```bash
-npm.cmd run build
-```
-
-## Environment Variables
-
-### Backend
-
-Create backend environment variables for:
-
-```txt
-PORT=3000
-NODE_ENV=development
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
-GROQ_API_KEY=
-SYSTEM_PRIVATE_KEY=
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1        # optional, this is the default
+GROQ_API_KEY=                # optional - BYOK / fallback path
+FRONTEND_URL=                # optional - your Vercel origin, for CORS
+ALLOWED_ORIGINS=             # optional - comma-separated extra CORS origins
 STUDIONET_RPC=https://studio.genlayer.com/api
-FRONTEND_URL=http://localhost:5173
 ```
 
-Required backend variables:
-
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY`
-- `GROQ_API_KEY`
-
-Required for backend deployment:
-
-- `SYSTEM_PRIVATE_KEY`
+For local development, put the same values in a `.dev.vars` file at the repo root (gitignored).
 
 ### Frontend
 
-For local development:
-
-```txt
-VITE_API_URL=http://localhost:3000/api
+```
+VITE_API_URL=http://localhost:8787/api   # local dev
 ```
 
-For Netlify production:
+In production, `VITE_API_URL` points at the deployed Worker.
 
-```txt
-VITE_API_URL=https://your-railway-backend-url.up.railway.app/api
-```
-
-The `/api` suffix matters because the frontend calls paths like:
-
-```txt
-/v1/contracts/generate
-```
-
-So the final production request becomes:
-
-```txt
-https://your-railway-backend-url.up.railway.app/api/v1/contracts/generate
-```
-
-## Deployment Notes
-
-### Railway Backend
-
-Deploy the backend to Railway and make sure the health check works:
-
-```txt
-https://your-railway-backend-url.up.railway.app/api/v1/health
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok",
-  "timestamp": "..."
-}
-```
-
-### Netlify Frontend
-
-Recommended Netlify settings:
-
-```txt
-Base directory: frontend
-Build command: npm run build
-Publish directory: dist
-```
-
-Netlify environment variable:
-
-```txt
-VITE_API_URL=https://your-railway-backend-url.up.railway.app/api
-```
-
-After changing environment variables, redeploy the Netlify site.
+---
 
 ## Database
 
 Supabase stores:
 
 - Contract generations
-- Deployed contracts
+- Deployed contract index (address, tx hash, network, deployer - written after a successful wallet-signed deploy)
 - Marketplace listings
-- Contract interactions
-- Usage logs
+- AI usage quota (3 free calls/day per client, bypassed with a bring-your-own Groq key)
 
-Migration files live in:
+Migration files live in `database/migrations/`.
 
-```txt
-database/migrations/
-```
+---
 
-The AI free-tier quota table is defined in:
+## Known limitations
 
-```txt
-database/migrations/002_ai_usage_limits.sql
-```
+- Static validation catches structural GenVM bugs but cannot fully replace deploying to a live network - some contracts may still need manual review, especially complex escrow, payment, or multi-actor consensus contracts
+- Bradbury and Asimov deployment should be tested with funded wallets before being treated as the primary path
+- Marketplace fork/compose workflows are not yet built
 
-## V1 Limitations
+## Roadmap
 
-Clause Forge V1 is functional but early.
-
-Known limitations:
-
-- Contract validation is static and should become deeper.
-- Contract simulation is mocked and does not fully reproduce GenLayer runtime behavior.
-- External wallet deployment is available, but needs more wallet-provider testing across MetaMask, Rabby, and network-switch edge cases.
-- Bradbury deployment is available, but should be tested with funded wallets and real contract examples before being treated as the primary deployment path.
-- Some generated contracts may still need manual review, especially complex escrow, payment, AI arbitration, and token custody contracts.
-- Marketplace, fork, and compose workflows need more production polish.
-
-## V2 Roadmap
-
-Planned V2 improvements:
-
-- More complete external wallet interaction flows after deployment
-- Deeper Bradbury production testing
-- Better transaction status tracking
-- Stronger contract generator reliability
-- Automatic repair/regeneration when validation fails
-- GenLayer schema preflight before deployment where possible
-- Better post-deploy schema checks
-- More robust marketplace listings
-- Fork and compose workflows
+- GenVM linter integration for deeper preflight checks before deployment
+- More production testing across wallet providers and network-switch edge cases
+- Fork and compose workflows for marketplace contracts
 - Contract versioning
-- Better user-facing deployment and schema error messages
 
-## Product Summary
+---
 
-Clause Forge V1 is a no-code GenLayer contract factory.
+## Disclaimer
 
-It turns plain English into GenLayer Intelligent Contracts, gives users a code preview, validates the result, deploys to Studionet, and lets users interact with the deployed contract.
-
-V1 proves the core workflow. V2 now extends it with external wallet deployment and Bradbury support, with the next focus on deeper production testing, generator reliability, and a stronger marketplace experience.
+Clause Forge generates Intelligent Contract code from natural-language descriptions. Review generated code before deploying it with real value, especially contracts involving payments, escrow, or token custody.
