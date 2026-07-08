@@ -378,6 +378,18 @@ Generate a GenLayer Intelligent Contract for:
 
 "${description}"
 
+IMPORTANT - the description above was written by a NON-DEVELOPER. Expect it to be
+casual, incomplete, and missing technical detail. You are the contract designer:
+silently expand it into a full specification before writing any code.
+- Infer the actors (owner/creator, submitters, reviewers, public readers) even if unnamed.
+- Infer the full lifecycle and statuses even if the user only described the happy path.
+- Infer sensible access control: privileged actions go to the owner/creator, submissions to anyone, reads to everyone, unless the description says otherwise.
+- Infer every field worth storing so the app is actually usable (ids, submitter addresses, statuses, reasons, timestamps via datetime.now(timezone.utc)).
+- Add the getters a frontend will obviously need (get item by id, counts, status, per-user lookups) even if the user never mentioned reading data.
+- Add duplicate protection, invalid-transition rejection, and an uncertain/escalation path for any judgement, even if the user never mentioned edge cases.
+- If the user mentions money, funding, rewards, or payouts, design proper payable flows with single-settlement protection.
+- Never leave placeholder comments or unimplemented methods; the user cannot finish the code themselves.
+
 Think contract-first:
 - Decide the app type and whether AI/web/value is actually needed.
 - Decide whether this is deterministic, web-aware, or ai-judgement before writing code.
@@ -386,7 +398,7 @@ Think contract-first:
 - Define allowed state transitions and reject invalid transitions in code.
 - Keep frontend UI, private API keys, Firebase/Admin SDK, file uploads, and large analytics outside the contract.
 - Do not use GenLayer as a generic chatbot/summarizer/analytics backend with no consensus-critical state change.
-- Generate one complete schema-safe contract.
+- Generate one complete schema-safe contract. Completeness matters more than brevity: implement the full inferred design, not a minimal sketch.
 
 Return ONLY the GenLayer Intelligent Contract in Python.`
 
