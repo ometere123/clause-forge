@@ -57,4 +57,15 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Native form controls default to white; make them follow the theme */
+  input,
+  textarea,
+  select {
+    @apply bg-background text-foreground;
+    color-scheme: light dark;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-muted-foreground;
+  }
 }
